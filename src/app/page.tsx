@@ -23,11 +23,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { configureLlm } from '@/ai/flows/configure-llm-flow';
 import { generateAiResponse } from '@/ai/flows/generate-ai-response';
 import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const ChatLayout = () => {
@@ -215,7 +213,7 @@ const ChatLayout = () => {
         <div className="w-80 flex flex-col border-r bg-background">
             <div className="p-4 border-b">
                 <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold">Chat</h2>
+                    <h2 className="text-xl font-bold">Uni Chat</h2>
                     <Button variant="ghost" size="icon"><Search className="h-5 w-5" /></Button>
                 </div>
                 <Button className="w-full mt-4 bg-black text-white hover:bg-black/90" onClick={handleNewChat}>
@@ -317,35 +315,34 @@ const ChatLayout = () => {
                                     <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
                                 </Avatar>
                             )}
-                            <div
+                             <div
                                 className={cn(
-                                'max-w-2xl rounded-2xl p-4',
-                                message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                    'max-w-2xl p-4',
+                                    message.role === 'user' && 'bg-muted rounded-2xl',
+                                    message.role === 'assistant' && 'bg-card text-card-foreground',
+                                    message.role === 'assistant' && message.content === 'table' && 'rounded-lg border shadow-sm',
+                                    message.role === 'assistant' && message.content !== 'table' && 'rounded-2xl'
                                 )}
                             >
                             {message.content === 'table' ? (
                                 <>
                                     <p className="text-sm mb-4">Here's a detailed breakdown of the best opportunities by company size:</p>
-                                    <Card>
-                                        <CardContent className="p-0">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                    <TableHead className="font-bold">Company Size</TableHead>
-                                                    <TableHead className="font-bold">Best Opportunities</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {opportunityData.map((d, i) => (
-                                                        <TableRow key={i}>
-                                                            <TableCell className="font-medium">{d.size}</TableCell>
-                                                            <TableCell className="whitespace-pre-line text-muted-foreground">{d.opportunities}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </CardContent>
-                                    </Card>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                            <TableHead className="font-bold">Company Size</TableHead>
+                                            <TableHead className="font-bold">Best Opportunities</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {opportunityData.map((d, i) => (
+                                                <TableRow key={i}>
+                                                    <TableCell className="font-medium">{d.size}</TableCell>
+                                                    <TableCell className="whitespace-pre-line text-muted-foreground">{d.opportunities}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
                                 </>
                             ) : (
                                 <p className="text-sm">{message.content}</p>
