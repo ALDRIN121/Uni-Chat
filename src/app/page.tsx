@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Search, Star, FileImage, Sun, Moon, Share2, Paperclip, Mic, MoreHorizontal } from 'lucide-react';
+import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Star, FileImage, Sun, Moon, Paperclip, Mic, MoreHorizontal, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -14,6 +14,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { configureLlm } from '@/ai/flows/configure-llm-flow';
 import { generateAiResponse } from '@/ai/flows/generate-ai-response';
@@ -163,12 +171,12 @@ const ChatLayout = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold">
-                  C
+                  U
               </Avatar>
-              <span className="font-semibold text-lg">Chat</span>
+              <span className="font-semibold text-lg">Uni Chat</span>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Search className="h-4 w-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNewChat}>
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
         </SidebarHeader>
@@ -191,8 +199,8 @@ const ChatLayout = () => {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton isActive>
-                      <Avatar className="w-6 h-6 text-xs bg-blue-200 text-blue-800">C</Avatar>
-                      <span>ChatrAI</span>
+                      <Avatar className="w-6 h-6 text-xs bg-blue-200 text-blue-800">U</Avatar>
+                      <span>Uni Chat</span>
                       <MoreHorizontal className="h-4 w-4 ml-auto" />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -281,8 +289,8 @@ const ChatLayout = () => {
               <SidebarMenuItem>
                   <SidebarMenuButton>
                       <Avatar className="w-8 h-8">
-                          <AvatarImage data-ai-hint="profile picture" src="https://placehold.co/40x40.png" alt="@shadcn" />
-                          <AvatarFallback>S</AvatarFallback>
+                          <AvatarImage data-ai-hint="profile picture" src="https://placehold.co/40x40.png" alt="User" />
+                          <AvatarFallback>U</AvatarFallback>
                       </Avatar>
                       <span>My Profile</span>
                   </SidebarMenuButton>
@@ -292,26 +300,37 @@ const ChatLayout = () => {
       </Sidebar>
 
       <main className="flex flex-col flex-1 h-full overflow-hidden">
-        <header className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            {isMobile && <SidebarTrigger />}
-            <h2 className="text-lg font-semibold">Orbita GPT</h2>
-            <Badge variant="outline">Plus</Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsConfigDialogOpen(true)}>
-              <Settings className="h-4 w-4 mr-2" />
-              Configuration
-            </Button>
-            <Button variant="outline">
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
-            </Button>
-            <Button className="bg-primary text-primary-foreground" onClick={handleNewChat}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Chat
-            </Button>
-          </div>
+        <header className="flex items-center justify-between p-2 border-b">
+            <div className="flex items-center gap-2">
+                {isMobile && <SidebarTrigger />}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="text-lg font-semibold">
+                            Orbita GPT
+                            <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuLabel>Select Model</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>Orbita GPT</DropdownMenuItem>
+                        <DropdownMenuItem>GPT-4</DropdownMenuItem>
+                        <DropdownMenuItem>Gemini Pro</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setIsConfigDialogOpen(true)}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Configuration
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                <Badge variant="outline">Plus</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+                <Button className="bg-primary text-primary-foreground" onClick={handleNewChat}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Chat
+                </Button>
+            </div>
         </header>
 
         <ScrollArea className="flex-1">
