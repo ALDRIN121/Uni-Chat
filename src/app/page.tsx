@@ -214,7 +214,7 @@ const ChatLayout = () => {
       
       {/* Chat List Sidebar */}
       {activeIcon === 'chat' && (
-        <div className="w-80 flex flex-col border-r bg-background h-full">
+        <div className="w-64 flex flex-col border-r bg-background h-full">
             <div className="p-4 border-b">
                 <div className="flex justify-between items-center">
                     <h2 className="text-xl font-bold">Uni Chat</h2>
