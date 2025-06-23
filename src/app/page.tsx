@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Inter } from 'next/font/google';
-import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Search, Folder, Star, Trash2 } from 'lucide-react';
+import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -43,6 +44,9 @@ const ChatLayout = () => {
   const [activeIcon, setActiveIcon] = useState('chat');
 
   useEffect(() => {
+    // Start with an empty chat
+    setMessages([]);
+
     const storedApiKey = localStorage.getItem('uni-chat-api-key');
     if (storedApiKey) {
       setApiKey(storedApiKey);
@@ -229,15 +233,6 @@ const ChatLayout = () => {
                            <Button variant="ghost" className="w-full justify-start truncate">What's the difference between a UI desi...</Button>
                         </div>
                     </div>
-                    <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
-                            Folders
-                        </h3>
-                         <div className="space-y-1">
-                           <Button variant="ghost" className="w-full justify-start"><Folder className="mr-2 h-4 w-4" /> Prompts</Button>
-                           <Button variant="ghost" className="w-full justify-start"><Folder className="mr-2 h-4 w-4" /> Saved</Button>
-                        </div>
-                    </div>
                 </div>
             </ScrollArea>
              <div className="p-4 border-t">
@@ -396,3 +391,5 @@ export default function Home() {
     <ChatLayout />
   );
 }
+
+    

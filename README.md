@@ -1,5 +1,7 @@
-# Firebase Studio
+# Firebase Studio - NextJS Starter
 
-This is a NextJS starter in Firebase Studio.
+This is a starter project built with Next.js, designed to be deployed on Firebase Hosting with Cloud Functions. It provides a basic structure to help you get started with a full-stack application using Firebase.
 
-To get started, take a look at src/app/page.tsx.
+## Getting Started
+
+1.  **Clone the repository:**
