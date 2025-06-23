@@ -29,7 +29,6 @@ import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarSeparator, useSidebar, SidebarTrigger } from '@/components/ui/sidebar';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const ChatLayout = () => {
@@ -50,6 +49,7 @@ const ChatLayout = () => {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [model, setModel] = useState('Orbita GPT');
   const scrollAreaEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [isDarkTheme, setIsDarkTheme] = useState(true);
@@ -279,14 +279,6 @@ const ChatLayout = () => {
                   </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                  <Button variant="outline" className="w-full justify-start h-auto py-2">
-                    <div className="flex flex-col items-start">
-                      <span>Upgrade to Pro</span>
-                      <span className="text-xs text-muted-foreground">Get more features</span>
-                    </div>
-                  </Button>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                   <SidebarMenuButton>
                       <Avatar className="w-8 h-8">
                           <AvatarImage data-ai-hint="profile picture" src="https://placehold.co/40x40.png" alt="User" />
@@ -306,30 +298,23 @@ const ChatLayout = () => {
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="text-lg font-semibold">
-                            Orbita GPT
+                            {model}
                             <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                         <DropdownMenuLabel>Select Model</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>Orbita GPT</DropdownMenuItem>
-                        <DropdownMenuItem>GPT-4</DropdownMenuItem>
-                        <DropdownMenuItem>Gemini Pro</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setModel('Orbita GPT')}>Orbita GPT</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setModel('GPT-4')}>GPT-4</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setModel('Gemini Pro')}>Gemini Pro</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setIsConfigDialogOpen(true)}>
+                        <DropdownMenuItem onSelect={() => setIsConfigDialogOpen(true)}>
                             <Settings className="h-4 w-4 mr-2" />
                             Configuration
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <Badge variant="outline">Plus</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-                <Button className="bg-primary text-primary-foreground" onClick={handleNewChat}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Chat
-                </Button>
             </div>
         </header>
 
@@ -417,8 +402,7 @@ const ChatLayout = () => {
                       </Button>
                   </div>
               </form>
-              <div className="flex justify-between items-center mt-2 px-4">
-                  <Button variant="outline" size="sm">Select Source</Button>
+              <div className="flex justify-center items-center mt-2 px-4">
                   <p className="text-xs text-muted-foreground">Centra may display inaccurate info, so please double check the response. <a href="#" className="underline">Your Privacy & Orbita GPT</a></p>
               </div>
           </div>
