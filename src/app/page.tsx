@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Inter } from 'next/font/google';
-import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2, Menu, Share2, Search } from 'lucide-react';
+import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2, Menu, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { generateAiResponse } from '@/ai/flows/generate-ai-response';
 import type { Message, ChatSession } from '@/lib/types';
@@ -321,19 +320,13 @@ const ChatLayout = () => {
                               className="w-full justify-start"
                               onClick={() => handleSessionSelect(session.id)}
                             >
-                              <span className="truncate text-left min-w-0">{session.title}</span>
+                              <span className="flex-1 text-left min-w-0 truncate">{session.title}</span>
                             </Button>
                           ))}
                         </div>
                     </div>
                 </div>
             </ScrollArea>
-             <div className="p-4 border-t">
-                <Button variant="outline" className="w-full">
-                    <Share2 className="mr-2 h-4 w-4" />
-                    Share conversation
-                </Button>
-            </div>
         </div>
       )}
       </div>
