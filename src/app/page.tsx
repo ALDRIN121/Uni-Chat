@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Star, FileImage, Sun, Moon, Paperclip, Mic, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Star, FileImage, Sun, Moon, Paperclip, Mic, MoreHorizontal, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,7 +28,6 @@ import { generateAiResponse } from '@/ai/flows/generate-ai-response';
 import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarSeparator, useSidebar, SidebarTrigger } from '@/components/ui/sidebar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const ChatLayout = () => {
@@ -53,7 +52,7 @@ const ChatLayout = () => {
   const scrollAreaEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [isDarkTheme, setIsDarkTheme] = useState(true);
-  const { isMobile } = useSidebar();
+  const [activeIcon, setActiveIcon] = useState('chat');
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('uni-chat-api-key');
@@ -164,137 +163,115 @@ const ChatLayout = () => {
     { size: 'Mid-Sized Company (201-1000 Employees)', opportunities: 'More stable structure with room for innovation\nAccess to better resources and mentorship\nHigher job security' },
   ];
   
+  const iconSidebarItems = [
+    { id: 'chat', icon: MessageSquare, tooltip: 'Chat' },
+    { id: 'headphones', icon: Headphones, tooltip: 'Headphones' },
+    { id: 'zap', icon: Zap, tooltip: 'Zap' },
+    { id: 'puzzle', icon: Puzzle, tooltip: 'Puzzle' },
+    { id: 'settings', icon: Settings, tooltip: 'Settings' },
+    { id: 'package', icon: Package, tooltip: 'Package' },
+    { id: 'users', icon: Users, tooltip: 'Users', badge: 'New' },
+  ];
+
   return (
-    <div className="flex h-full">
-      <Sidebar className="border-r bg-sidebar text-sidebar-foreground p-2" collapsible="icon">
-        <SidebarHeader className="p-2">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold">
-                  U
-              </Avatar>
-              <span className="font-semibold text-lg">Uni Chat</span>
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleNewChat}>
-              <Plus className="h-4 w-4" />
+    <div className="flex h-screen bg-background text-foreground">
+      {/* Icon Sidebar */}
+      <div className="flex flex-col items-center justify-between w-16 p-2 bg-muted/30 border-r">
+        <div className="flex flex-col items-center gap-2">
+            <Avatar className="h-10 w-10 mb-4 bg-gradient-to-br from-blue-400 to-indigo-600" />
+            {iconSidebarItems.map((item) => (
+                <Button
+                key={item.id}
+                variant="ghost"
+                size="icon"
+                className={cn(
+                    'h-10 w-10 rounded-lg relative',
+                    activeIcon === item.id && 'bg-black text-white hover:bg-black/90 hover:text-white'
+                )}
+                onClick={() => setActiveIcon(item.id)}
+                >
+                <item.icon className="h-5 w-5" />
+                {item.badge && (
+                    <span className="absolute -top-1 -right-2 block h-4 w-auto min-w-[1rem] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] text-white">
+                        {item.badge}
+                    </span>
+                )}
+                </Button>
+            ))}
+        </div>
+        <div className="flex flex-col items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-lg" onClick={toggleTheme}>
+                {isDarkTheme ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
-          </div>
-        </SidebarHeader>
+            <Avatar>
+                <AvatarImage src="https://placehold.co/40x40.png" data-ai-hint="profile picture" alt="User" />
+                <AvatarFallback>S</AvatarFallback>
+            </Avatar>
+        </div>
+      </div>
+      
+      {/* Chat List Sidebar */}
+      {activeIcon === 'chat' && (
+        <div className="w-80 flex flex-col border-r bg-background">
+            <div className="p-4 border-b">
+                <div className="flex justify-between items-center">
+                    <h2 className="text-xl font-bold">Chat</h2>
+                    <Button variant="ghost" size="icon"><Search className="h-5 w-5" /></Button>
+                </div>
+                <Button className="w-full mt-4 bg-black text-white hover:bg-black/90" onClick={handleNewChat}>
+                    <Plus className="mr-2 h-4 w-4" /> New Chat <Sparkles className="ml-auto h-4 w-4" />
+                </Button>
+            </div>
+            <ScrollArea className="flex-1">
+                <div className="p-4 space-y-4">
+                    <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2"><Star className="h-4 w-4" /> Saved</h3>
+                        <div className="space-y-1">
+                            <Button variant="ghost" className="w-full justify-start gap-2">
+                                <Avatar className="w-6 h-6 text-xs bg-blue-200 text-blue-800">C</Avatar>
+                                <span>ChatrAI</span>
+                                <MoreHorizontal className="h-4 w-4 ml-auto" />
+                            </Button>
+                            <Button variant="ghost" className="w-full justify-start gap-2">
+                                <FileImage className="h-4 w-4 text-muted-foreground" />
+                                <span>Image of sun</span>
+                                <MoreHorizontal className="h-4 w-4 ml-auto" />
+                            </Button>
+                            <Button variant="ghost" className="w-full justify-start gap-2">
+                                <Avatar className="w-6 h-6 text-xs bg-purple-200 text-purple-800">D</Avatar>
+                                <span>Data Analyst</span>
+                                <MoreHorizontal className="h-4 w-4 ml-auto" />
+                            </Button>
+                        </div>
+                    </div>
+                     <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center justify-between">
+                            Today <ChevronDown className="h-4 w-4" />
+                        </h3>
+                        <div className="space-y-1">
+                           <Button variant="ghost" className="w-full justify-start truncate">How can I improve my time managemen...</Button>
+                           <Button variant="ghost" className="w-full justify-start truncate">What's the best way to learn a new skill...</Button>
+                           <Button variant="ghost" className="w-full justify-start truncate">How do I start investing in stocks as a be...</Button>
+                        </div>
+                    </div>
+                     <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center justify-between">
+                            Yesterday <ChevronDown className="h-4 w-4" />
+                        </h3>
+                        <div className="space-y-1">
+                           <Button variant="ghost" className="w-full justify-start truncate">What are the benefits of daily exercise fo...</Button>
+                           <Button variant="ghost" className="w-full justify-start truncate">What's the difference between a UI desi...</Button>
+                        </div>
+                    </div>
+                </div>
+            </ScrollArea>
+        </div>
+      )}
 
-        <SidebarContent className="p-0">
-            <SidebarMenu className="p-2">
-              <SidebarMenuItem>
-                  <SidebarMenuButton className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold" onClick={handleNewChat}>
-                      <Plus className="h-4 w-4" />
-                      New Chat
-                      <Sparkles className="h-4 w-4 ml-auto" />
-                  </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          <SidebarGroup className="p-2">
-            <SidebarGroupLabel className="flex items-center gap-2 text-xs text-muted-foreground px-2">
-              <Star className="h-3 w-3" /> Saved
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton isActive>
-                      <Avatar className="w-6 h-6 text-xs bg-blue-200 text-blue-800">U</Avatar>
-                      <span>Uni Chat</span>
-                      <MoreHorizontal className="h-4 w-4 ml-auto" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>
-                    <FileImage className="h-4 w-4 text-muted-foreground" />
-                      <span>Image of sun</span>
-                      <MoreHorizontal className="h-4 w-4 ml-auto" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                  <SidebarMenuItem>
-                  <SidebarMenuButton>
-                      <Avatar className="w-6 h-6 text-xs bg-purple-200 text-purple-800">D</Avatar>
-                      <span>Data Analyst</span>
-                      <MoreHorizontal className="h-4 w-4 ml-auto" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-            <SidebarGroup className="p-2">
-            <SidebarGroupLabel className="flex items-center gap-2 text-xs text-muted-foreground px-2">
-              Today
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>
-                      <span className="truncate">How can I improve my time managemen...</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                  <SidebarMenuItem>
-                  <SidebarMenuButton>
-                      <span className="truncate">What's the best way to learn a new skill...</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>
-                      <span className="truncate">How do I start investing in stocks as a be...</span>
-                      <MoreHorizontal className="h-4 w-4 ml-auto" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          <SidebarGroup className="p-2">
-            <SidebarGroupLabel className="flex items-center gap-2 text-xs text-muted-foreground px-2">
-              Yesterday
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>
-                      <span className="truncate">What are the benefits of daily exercise fo...</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                  <SidebarMenuItem>
-                  <SidebarMenuButton>
-                      <span className="truncate">What's the difference between a UI desi...</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-
-        <SidebarFooter className="p-2 mt-auto">
-          <SidebarSeparator />
-          <SidebarMenu>
-              <SidebarMenuItem>
-                  <SidebarMenuButton onClick={toggleTheme}>
-                      {isDarkTheme ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                      <span>{isDarkTheme ? 'Dark Mode' : 'Light Mode'}</span>
-                  </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                  <SidebarMenuButton>
-                      <Avatar className="w-8 h-8">
-                          <AvatarImage data-ai-hint="profile picture" src="https://placehold.co/40x40.png" alt="User" />
-                          <AvatarFallback>U</AvatarFallback>
-                      </Avatar>
-                      <span>My Profile</span>
-                  </SidebarMenuButton>
-              </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
-
-      <main className="flex flex-col flex-1 h-full overflow-hidden">
-        <header className="flex items-center justify-between p-2 border-b">
+      {/* Main Content */}
+      <main className="flex flex-col flex-1 h-screen overflow-hidden">
+        <header className="flex items-center justify-between p-2 border-b z-10 bg-background">
             <div className="flex items-center gap-2">
-                {isMobile && <SidebarTrigger />}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="text-lg font-semibold">
@@ -318,95 +295,109 @@ const ChatLayout = () => {
             </div>
         </header>
 
-        <ScrollArea className="flex-1">
-          <div className="space-y-8 max-w-4xl mx-auto p-6">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  'flex items-start gap-4',
-                  message.role === 'user' && 'justify-end'
-                )}
-              >
-                {message.role === 'user' && (
-                  <div className="flex flex-col items-end">
-                    <div
-                      className={cn(
-                        'max-w-2xl rounded-2xl p-4 bg-muted'
-                      )}
-                    >
-                      <p className="text-sm">{message.content}</p>
+        <div className="flex-1 flex flex-col overflow-hidden">
+            <ScrollArea className="flex-1">
+              <div className="space-y-8 max-w-4xl mx-auto p-6">
+                 {messages.length === 0 ? (
+                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-20">
+                        <Avatar className="h-16 w-16 mb-4 bg-gradient-to-br from-blue-400 to-indigo-600" />
+                        <h2 className="text-2xl font-semibold text-foreground">How can I help you today?</h2>
+                    </div>
+                 ) : (
+                    messages.map((message) => (
+                        <div
+                            key={message.id}
+                            className={cn(
+                            'flex items-start gap-4',
+                            message.role === 'user' ? 'justify-end' : ''
+                            )}
+                        >
+                            {message.role === 'assistant' && (
+                                <Avatar>
+                                    <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
+                                </Avatar>
+                            )}
+                            <div
+                                className={cn(
+                                'max-w-2xl rounded-2xl p-4',
+                                message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                                )}
+                            >
+                            {message.content === 'table' ? (
+                                <>
+                                    <p className="text-sm mb-4">Here's a detailed breakdown of the best opportunities by company size:</p>
+                                    <Card>
+                                        <CardContent className="p-0">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                    <TableHead className="font-bold">Company Size</TableHead>
+                                                    <TableHead className="font-bold">Best Opportunities</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {opportunityData.map((d, i) => (
+                                                        <TableRow key={i}>
+                                                            <TableCell className="font-medium">{d.size}</TableCell>
+                                                            <TableCell className="whitespace-pre-line text-muted-foreground">{d.opportunities}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                </>
+                            ) : (
+                                <p className="text-sm">{message.content}</p>
+                            )}
+                            </div>
+                            {message.role === 'user' && (
+                                <Avatar>
+                                    <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
+                                </Avatar>
+                            )}
+                        </div>
+                    ))
+                 )}
+                {isLoading && (
+                  <div className="flex items-start gap-4">
+                     <Avatar>
+                        <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
+                    </Avatar>
+                    <div className="bg-muted rounded-2xl p-4 flex items-center space-x-2">
+                      <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
                     </div>
                   </div>
                 )}
-                {message.role === 'assistant' && (
-                    <div className="flex flex-col gap-2 w-full">
-                      {message.content !== 'table' && <p className="text-sm text-muted-foreground">{message.content}</p>}
-                      {message.content === 'table' && (
-                      <>
-                        <p className="text-sm">Here's a detailed breakdown of the best opportunities by company size:</p>
-                        <Card>
-                            <CardContent className="p-0">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                        <TableHead className="font-bold">Company Size</TableHead>
-                                        <TableHead className="font-bold">Best Opportunities</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {opportunityData.map((d, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell className="font-medium">{d.size}</TableCell>
-                                                <TableCell className="whitespace-pre-line text-muted-foreground">{d.opportunities}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                      </>
-                      )}
-                    </div>
-                )}
+                  <div ref={scrollAreaEndRef} />
               </div>
-            ))}
-            {isLoading && (
-              <div className="flex items-start gap-4">
-                <div className="bg-muted rounded-2xl rounded-bl-none p-4 flex items-center space-x-2">
-                  <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-                </div>
-              </div>
-            )}
-              <div ref={scrollAreaEndRef} />
-          </div>
-        </ScrollArea>
+            </ScrollArea>
 
-        <footer className="p-4 border-t w-full max-w-4xl mx-auto">
-          <div className="bg-card p-4 rounded-lg shadow-sm">
-              <form onSubmit={handleSendMessage} className="relative">
-                  <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder="Ask me anything..."
-                      disabled={isLoading}
-                      autoComplete="off"
-                      className="pl-10 pr-40 h-12 rounded-full bg-background"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                      <Button type="button" variant="ghost" size="icon"><Paperclip className="h-5 w-5" /></Button>
+            <footer className="p-4 w-full max-w-4xl mx-auto">
+              <div className="bg-card p-4 rounded-lg shadow-sm">
+                  <form onSubmit={handleSendMessage} className="relative">
+                      <Input
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          placeholder="Ask me anything..."
+                          disabled={isLoading}
+                          autoComplete="off"
+                          className="pl-4 pr-32 h-12 rounded-full bg-background"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <Button type="button" variant="ghost" size="icon"><Paperclip className="h-5 w-5" /></Button>
                       <Button type="button" variant="ghost" size="icon"><Mic className="h-5 w-5" /></Button>
-                      <Button type="submit" disabled={isLoading || !input.trim()} size="icon" aria-label="Send Message" className="bg-primary rounded-full h-8 w-8">
-                          <Send className="h-4 w-4" />
-                      </Button>
+                          <Button type="submit" disabled={isLoading || !input.trim()} size="icon" aria-label="Send Message" className="bg-primary rounded-full h-8 w-8">
+                              <Send className="h-4 w-4" />
+                          </Button>
+                      </div>
+                  </form>
+                  <div className="flex justify-center items-center mt-2 px-4">
+                      <p className="text-xs text-muted-foreground">Uni Chat may display inaccurate info. Your Privacy & Orbita GPT</p>
                   </div>
-              </form>
-              <div className="flex justify-center items-center mt-2 px-4">
-                  <p className="text-xs text-muted-foreground">Centra may display inaccurate info, so please double check the response. <a href="#" className="underline">Your Privacy & Orbita GPT</a></p>
               </div>
-          </div>
-        </footer>
+            </footer>
+        </div>
       </main>
 
       <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
@@ -439,8 +430,6 @@ const ChatLayout = () => {
 
 export default function Home() {
   return (
-    <SidebarProvider>
-      <ChatLayout />
-    </SidebarProvider>
+    <ChatLayout />
   );
 }
