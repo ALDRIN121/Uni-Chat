@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Search } from 'lucide-react';
+import { Inter } from 'next/font/google';
+import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Search, Folder, Star, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -23,19 +24,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 const ConfigDialog = dynamic(() => import('@/components/config-dialog').then((mod) => mod.ConfigDialog));
 
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-body',
+});
+
 const ChatLayout = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'user',
-      content: 'What are the best open opportunities by company size?',
-    },
-    {
-      id: '2',
-      role: 'assistant',
-      content: `table`, // Special content type to render the table from the image
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -167,6 +162,7 @@ const ChatLayout = () => {
   ];
 
   return (
+    <div className={`font-body antialiased h-full ${inter.variable}`}>
     <div className="flex h-screen bg-background text-foreground">
       {/* Icon Sidebar */}
       <div className="flex flex-col items-center justify-between w-16 p-2 bg-muted/30 border-r">
@@ -209,11 +205,8 @@ const ChatLayout = () => {
             <div className="p-4 border-b">
                 <div className="flex justify-between items-center">
                     <h2 className="text-xl font-bold">Uni Chat</h2>
-                    <Button variant="ghost" size="icon"><Search className="h-5 w-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={handleNewChat}><Plus className="h-5 w-5" /></Button>
                 </div>
-                <Button className="w-full mt-4 bg-black text-white hover:bg-black/90" onClick={handleNewChat}>
-                    <Plus className="mr-2 h-4 w-4" /> New Chat <Sparkles className="ml-auto h-4 w-4" />
-                </Button>
             </div>
             <ScrollArea className="flex-1">
                 <div className="p-4 space-y-4">
@@ -236,8 +229,20 @@ const ChatLayout = () => {
                            <Button variant="ghost" className="w-full justify-start truncate">What's the difference between a UI desi...</Button>
                         </div>
                     </div>
+                    <div>
+                        <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center">
+                            Folders
+                        </h3>
+                         <div className="space-y-1">
+                           <Button variant="ghost" className="w-full justify-start"><Folder className="mr-2 h-4 w-4" /> Prompts</Button>
+                           <Button variant="ghost" className="w-full justify-start"><Folder className="mr-2 h-4 w-4" /> Saved</Button>
+                        </div>
+                    </div>
                 </div>
             </ScrollArea>
+             <div className="p-4 border-t">
+                <Button variant="ghost" className="w-full justify-start"><Trash2 className="mr-2 h-4 w-4" /> Clear conversations</Button>
+             </div>
         </div>
       )}
 
@@ -294,12 +299,12 @@ const ChatLayout = () => {
                                 className={cn(
                                     'max-w-2xl',
                                     message.role === 'user' && 'bg-primary text-primary-foreground p-4 rounded-2xl',
-                                    message.role === 'assistant' && message.content === 'table' && 'bg-card text-card-foreground p-0 rounded-lg border shadow-sm',
+                                    message.role === 'assistant' && message.content === 'table' && 'w-full',
                                     message.role === 'assistant' && message.content !== 'table' && 'bg-card text-card-foreground p-4 rounded-2xl'
                                 )}
                             >
                             {message.content === 'table' ? (
-                                <div className="p-4">
+                                <div className="p-4 rounded-lg border shadow-sm bg-card text-card-foreground">
                                     <p className="text-sm mb-4">Here's a detailed breakdown of the best opportunities by company size:</p>
                                     <Table>
                                         <TableHeader>
@@ -380,6 +385,7 @@ const ChatLayout = () => {
             handleConfigureLlm={handleConfigureLlm}
         />
       )}
+    </div>
     </div>
   );
 }
