@@ -23,7 +23,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://placehold.co" />
       </head>
-      <body className={`font-body antialiased h-full ${inter.variable}`}>
+      <body className={`font-body antialiased h-full ${inter.variable}`} suppressHydrationWarning>
         {children}
         <Toaster />
       </body>
