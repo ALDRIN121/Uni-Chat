@@ -321,7 +321,7 @@ const ChatLayout = () => {
                               className="w-full justify-start"
                               onClick={() => handleSessionSelect(session.id)}
                             >
-                              <span className="flex-1 truncate text-left">{session.title}</span>
+                              <span className="truncate text-left min-w-0">{session.title}</span>
                             </Button>
                           ))}
                         </div>
