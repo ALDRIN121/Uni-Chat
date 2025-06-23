@@ -318,10 +318,10 @@ const ChatLayout = () => {
                             <Button
                               key={session.id}
                               variant={activeSessionId === session.id ? "secondary" : "ghost"}
-                              className="w-full justify-start truncate"
+                              className="w-full justify-start"
                               onClick={() => handleSessionSelect(session.id)}
                             >
-                              {session.title}
+                              <span className="truncate">{session.title}</span>
                             </Button>
                           ))}
                         </div>
@@ -484,4 +484,5 @@ export default function Home() {
   );
 }
 
+    
     
