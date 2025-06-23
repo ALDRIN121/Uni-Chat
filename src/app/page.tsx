@@ -202,13 +202,27 @@ const ChatLayout = () => {
             ))}
         </div>
         <div className="flex flex-col items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-lg" onClick={toggleTheme}>
-                {isDarkTheme ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-            <Avatar>
-                <AvatarImage src="https://placehold.co/40x40.png" data-ai-hint="profile picture" alt="User" />
-                <AvatarFallback>S</AvatarFallback>
-            </Avatar>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src="https://placehold.co/40x40.png" data-ai-hint="profile picture" alt="User" />
+                    <AvatarFallback>S</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="end" className="w-56 mb-2">
+                <DropdownMenuItem onClick={toggleTheme}>
+                  {isDarkTheme ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                  <span>{isDarkTheme ? "Light Mode" : "Dark Mode"}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleNewChat}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Clear conversations</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </div>
       
@@ -244,9 +258,6 @@ const ChatLayout = () => {
                     </div>
                 </div>
             </ScrollArea>
-             <div className="p-4 border-t">
-                <Button variant="ghost" className="w-full justify-start"><Trash2 className="mr-2 h-4 w-4" /> Clear conversations</Button>
-             </div>
         </div>
       )}
       </div>
