@@ -222,26 +222,6 @@ const ChatLayout = () => {
             </div>
             <ScrollArea className="flex-1">
                 <div className="p-4 space-y-4">
-                    <div>
-                        <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2"><Star className="h-4 w-4" /> Saved</h3>
-                        <div className="space-y-1">
-                            <Button variant="ghost" className="w-full justify-start gap-2">
-                                <Avatar className="w-6 h-6 text-xs bg-blue-200 text-blue-800">C</Avatar>
-                                <span>ChatrAI</span>
-                                <MoreHorizontal className="h-4 w-4 ml-auto" />
-                            </Button>
-                            <Button variant="ghost" className="w-full justify-start gap-2">
-                                <FileImage className="h-4 w-4 text-muted-foreground" />
-                                <span>Image of sun</span>
-                                <MoreHorizontal className="h-4 w-4 ml-auto" />
-                            </Button>
-                            <Button variant="ghost" className="w-full justify-start gap-2">
-                                <Avatar className="w-6 h-6 text-xs bg-purple-200 text-purple-800">D</Avatar>
-                                <span>Data Analyst</span>
-                                <MoreHorizontal className="h-4 w-4 ml-auto" />
-                            </Button>
-                        </div>
-                    </div>
                      <div>
                         <h3 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center justify-between">
                             Today <ChevronDown className="h-4 w-4" />
@@ -317,11 +297,10 @@ const ChatLayout = () => {
                             )}
                              <div
                                 className={cn(
-                                    'max-w-2xl p-4',
-                                    message.role === 'user' && 'bg-primary text-primary-foreground rounded-2xl',
-                                    message.role === 'assistant' && 'bg-card text-card-foreground',
+                                    'max-w-2xl',
+                                    message.role === 'user' && 'bg-primary text-primary-foreground p-4 rounded-2xl',
                                     message.role === 'assistant' && message.content === 'table' && 'bg-card text-card-foreground p-0 rounded-lg border shadow-sm',
-                                    message.role === 'assistant' && message.content !== 'table' && 'rounded-2xl'
+                                    message.role === 'assistant' && message.content !== 'table' && 'bg-card text-card-foreground p-4 rounded-2xl'
                                 )}
                             >
                             {message.content === 'table' ? (
@@ -371,7 +350,7 @@ const ChatLayout = () => {
             </ScrollArea>
 
             <footer className="p-4 w-full max-w-4xl mx-auto">
-              <div className="bg-card p-4 rounded-2xl shadow-sm">
+              <div className="bg-card p-4 rounded-3xl shadow-sm">
                   <form onSubmit={handleSendMessage} className="relative">
                       <Input
                           value={input}
