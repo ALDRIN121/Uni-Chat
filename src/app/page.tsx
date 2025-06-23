@@ -318,14 +318,14 @@ const ChatLayout = () => {
                              <div
                                 className={cn(
                                     'max-w-2xl p-4',
-                                    message.role === 'user' && 'bg-muted rounded-2xl',
+                                    message.role === 'user' && 'bg-primary text-primary-foreground rounded-2xl',
                                     message.role === 'assistant' && 'bg-card text-card-foreground',
-                                    message.role === 'assistant' && message.content === 'table' && 'rounded-lg border shadow-sm',
+                                    message.role === 'assistant' && message.content === 'table' && 'bg-card text-card-foreground p-0 rounded-lg border shadow-sm',
                                     message.role === 'assistant' && message.content !== 'table' && 'rounded-2xl'
                                 )}
                             >
                             {message.content === 'table' ? (
-                                <>
+                                <div className="p-4">
                                     <p className="text-sm mb-4">Here's a detailed breakdown of the best opportunities by company size:</p>
                                     <Table>
                                         <TableHeader>
@@ -343,7 +343,7 @@ const ChatLayout = () => {
                                             ))}
                                         </TableBody>
                                     </Table>
-                                </>
+                                </div>
                             ) : (
                                 <p className="text-sm">{message.content}</p>
                             )}
@@ -371,7 +371,7 @@ const ChatLayout = () => {
             </ScrollArea>
 
             <footer className="p-4 w-full max-w-4xl mx-auto">
-              <div className="bg-card p-4 rounded-lg shadow-sm">
+              <div className="bg-card p-4 rounded-2xl shadow-sm">
                   <form onSubmit={handleSendMessage} className="relative">
                       <Input
                           value={input}
