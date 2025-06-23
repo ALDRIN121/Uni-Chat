@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Inter } from 'next/font/google';
-import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2 } from 'lucide-react';
+import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,6 +22,8 @@ import { generateAiResponse } from '@/ai/flows/generate-ai-response';
 import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const ConfigDialog = dynamic(() => import('@/components/config-dialog').then((mod) => mod.ConfigDialog));
 
@@ -42,6 +44,8 @@ const ChatLayout = () => {
   const { toast } = useToast();
   const [isDarkTheme, setIsDarkTheme] = useState(true);
   const [activeIcon, setActiveIcon] = useState('chat');
+  const isMobile = useIsMobile();
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Start with an empty chat
@@ -63,6 +67,12 @@ const ChatLayout = () => {
       setIsDarkTheme(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+        setIsMobileSidebarOpen(false);
+    }
+  }, [isMobile, activeIcon]);
 
   useEffect(() => {
     scrollAreaEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -164,12 +174,11 @@ const ChatLayout = () => {
     { id: 'package', icon: Package, tooltip: 'Package' },
     { id: 'users', icon: Users, tooltip: 'Users', badge: 'New' },
   ];
-
-  return (
-    <div className={`font-body antialiased h-full ${inter.variable}`}>
-    <div className="flex h-screen bg-background text-foreground">
+  
+  const sidebarContent = (
+    <div className="flex h-full">
       {/* Icon Sidebar */}
-      <div className="flex flex-col items-center justify-between w-16 p-2 bg-muted/30 border-r">
+      <div className="flex flex-col items-center justify-between w-16 p-2 bg-muted/30 border-r h-full">
         <div className="flex flex-col items-center gap-2">
             <Avatar className="h-10 w-10 mb-4 bg-gradient-to-br from-blue-400 to-indigo-600" />
             {iconSidebarItems.map((item) => (
@@ -205,7 +214,7 @@ const ChatLayout = () => {
       
       {/* Chat List Sidebar */}
       {activeIcon === 'chat' && (
-        <div className="w-80 flex flex-col border-r bg-background">
+        <div className="w-80 flex flex-col border-r bg-background h-full">
             <div className="p-4 border-b">
                 <div className="flex justify-between items-center">
                     <h2 className="text-xl font-bold">Uni Chat</h2>
@@ -240,136 +249,156 @@ const ChatLayout = () => {
              </div>
         </div>
       )}
+      </div>
+  );
 
-      {/* Main Content */}
-      <main className="flex flex-col flex-1 h-screen overflow-hidden">
-        <header className="flex items-center justify-between p-2 border-b z-10 bg-background">
-            <div className="flex items-center gap-2">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="text-lg font-semibold">
-                            {model}
-                            <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuLabel>Select Model</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => setModel('Orbita GPT')}>Orbita GPT</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setModel('GPT-4')}>GPT-4</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setModel('Gemini Pro')}>Gemini Pro</DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => setIsConfigDialogOpen(true)}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Configuration
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-        </header>
+  return (
+    <div className={`font-body antialiased h-full ${inter.variable}`}>
+    <div className="flex h-screen bg-background text-foreground">
+      
+      <div className="hidden md:flex h-full">
+        {sidebarContent}
+      </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-            <ScrollArea className="flex-1">
-              <div className="space-y-8 max-w-4xl mx-auto p-6">
-                 {messages.length === 0 ? (
-                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-20">
-                        <Avatar className="h-16 w-16 mb-4 bg-gradient-to-br from-blue-400 to-indigo-600" />
-                        <h2 className="text-2xl font-semibold text-foreground">How can I help you today?</h2>
-                    </div>
-                 ) : (
-                    messages.map((message) => (
-                        <div
-                            key={message.id}
-                            className={cn(
-                            'flex items-start gap-4',
-                            message.role === 'user' ? 'justify-end' : ''
-                            )}
-                        >
-                            {message.role === 'assistant' && (
-                                <Avatar>
-                                    <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
-                                </Avatar>
-                            )}
-                             <div
-                                className={cn(
-                                    'max-w-2xl',
-                                    message.role === 'user' && 'bg-primary text-primary-foreground p-4 rounded-2xl',
-                                    message.role === 'assistant' && message.content === 'table' && 'w-full',
-                                    message.role === 'assistant' && message.content !== 'table' && 'bg-card text-card-foreground p-4 rounded-2xl'
-                                )}
-                            >
-                            {message.content === 'table' ? (
-                                <div className="p-4 rounded-lg border shadow-sm bg-card text-card-foreground">
-                                    <p className="text-sm mb-4">Here's a detailed breakdown of the best opportunities by company size:</p>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                            <TableHead className="font-bold">Company Size</TableHead>
-                                            <TableHead className="font-bold">Best Opportunities</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {opportunityData.map((d, i) => (
-                                                <TableRow key={i}>
-                                                    <TableCell className="font-medium">{d.size}</TableCell>
-                                                    <TableCell className="whitespace-pre-line text-muted-foreground">{d.opportunities}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            ) : (
-                                <p className="text-sm">{message.content}</p>
-                            )}
-                            </div>
-                            {message.role === 'user' && (
-                                <Avatar>
-                                    <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
-                                </Avatar>
-                            )}
-                        </div>
-                    ))
-                 )}
-                {isLoading && (
-                  <div className="flex items-start gap-4">
-                     <Avatar>
-                        <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
-                    </Avatar>
-                    <div className="bg-muted rounded-2xl p-4 flex items-center space-x-2">
-                      <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  </div>
-                )}
-                  <div ref={scrollAreaEndRef} />
-              </div>
-            </ScrollArea>
-
-            <footer className="p-4 w-full max-w-4xl mx-auto">
-              <div className="bg-card p-4 rounded-3xl shadow-sm">
-                  <form onSubmit={handleSendMessage} className="relative">
-                      <Input
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          placeholder="Ask me anything..."
-                          disabled={isLoading}
-                          autoComplete="off"
-                          className="pl-4 pr-32 h-12 rounded-full bg-background"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                          <Button type="button" variant="ghost" size="icon"><Paperclip className="h-5 w-5" /></Button>
-                      <Button type="button" variant="ghost" size="icon"><Mic className="h-5 w-5" /></Button>
-                          <Button type="submit" disabled={isLoading || !input.trim()} size="icon" aria-label="Send Message" className="bg-primary rounded-full h-8 w-8">
-                              <Send className="h-4 w-4" />
+      <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+        {/* Main Content */}
+        <main className="flex flex-col flex-1 h-screen overflow-hidden">
+          <header className="flex items-center justify-between p-2 border-b z-10 bg-background">
+              <div className="flex items-center gap-2">
+                  <SheetTrigger asChild>
+                      <Button variant="ghost" size="icon" className="md:hidden">
+                          <Menu className="h-5 w-5" />
+                      </Button>
+                  </SheetTrigger>
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="text-lg font-semibold">
+                              {model}
+                              <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
                           </Button>
-                      </div>
-                  </form>
-                  <div className="flex justify-center items-center mt-2 px-4">
-                      <p className="text-xs text-muted-foreground">Uni Chat may display inaccurate info. Your Privacy & Orbita GPT</p>
-                  </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                          <DropdownMenuLabel>Select Model</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => setModel('Orbita GPT')}>Orbita GPT</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setModel('GPT-4')}>GPT-4</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setModel('Gemini Pro')}>Gemini Pro</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => setIsConfigDialogOpen(true)}>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Configuration
+                          </DropdownMenuItem>
+                      </DropdownMenuContent>
+                  </DropdownMenu>
               </div>
-            </footer>
-        </div>
-      </main>
+          </header>
+
+          <div className="flex-1 flex flex-col overflow-hidden">
+              <ScrollArea className="flex-1">
+                <div className="space-y-8 max-w-4xl mx-auto p-6">
+                   {messages.length === 0 ? (
+                       <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-20">
+                          <Avatar className="h-16 w-16 mb-4 bg-gradient-to-br from-blue-400 to-indigo-600" />
+                          <h2 className="text-2xl font-semibold text-foreground">How can I help you today?</h2>
+                      </div>
+                   ) : (
+                      messages.map((message) => (
+                          <div
+                              key={message.id}
+                              className={cn(
+                              'flex items-start gap-4',
+                              message.role === 'user' ? 'justify-end' : ''
+                              )}
+                          >
+                              {message.role === 'assistant' && (
+                                  <Avatar>
+                                      <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
+                                  </Avatar>
+                              )}
+                               <div
+                                  className={cn(
+                                      'max-w-2xl',
+                                      message.role === 'user' && 'bg-primary text-primary-foreground p-4 rounded-2xl',
+                                      message.role === 'assistant' && message.content === 'table' && 'w-full',
+                                      message.role === 'assistant' && message.content !== 'table' && 'bg-card text-card-foreground p-4 rounded-2xl'
+                                  )}
+                              >
+                              {message.content === 'table' ? (
+                                  <div className="p-4 rounded-lg border shadow-sm bg-card text-card-foreground">
+                                      <p className="text-sm mb-4">Here's a detailed breakdown of the best opportunities by company size:</p>
+                                      <Table>
+                                          <TableHeader>
+                                              <TableRow>
+                                              <TableHead className="font-bold">Company Size</TableHead>
+                                              <TableHead className="font-bold">Best Opportunities</TableHead>
+                                              </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                              {opportunityData.map((d, i) => (
+                                                  <TableRow key={i}>
+                                                      <TableCell className="font-medium">{d.size}</TableCell>
+                                                      <TableCell className="whitespace-pre-line text-muted-foreground">{d.opportunities}</TableCell>
+                                                  </TableRow>
+                                              ))}
+                                          </TableBody>
+                                      </Table>
+                                  </div>
+                              ) : (
+                                  <p className="text-sm">{message.content}</p>
+                              )}
+                              </div>
+                              {message.role === 'user' && (
+                                  <Avatar>
+                                      <AvatarFallback><User className="h-5 w-5" /></AvatarFallback>
+                                  </Avatar>
+                              )}
+                          </div>
+                      ))
+                   )}
+                  {isLoading && (
+                    <div className="flex items-start gap-4">
+                       <Avatar>
+                          <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
+                      </Avatar>
+                      <div className="bg-muted rounded-2xl p-4 flex items-center space-x-2">
+                        <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    </div>
+                  )}
+                    <div ref={scrollAreaEndRef} />
+                </div>
+              </ScrollArea>
+
+              <footer className="p-4 w-full max-w-4xl mx-auto">
+                <div className="bg-card p-4 rounded-3xl shadow-sm">
+                    <form onSubmit={handleSendMessage} className="relative">
+                        <Input
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Ask me anything..."
+                            disabled={isLoading}
+                            autoComplete="off"
+                            className="pl-4 pr-32 h-12 rounded-full bg-background"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <Button type="button" variant="ghost" size="icon"><Paperclip className="h-5 w-5" /></Button>
+                        <Button type="button" variant="ghost" size="icon"><Mic className="h-5 w-5" /></Button>
+                            <Button type="submit" disabled={isLoading || !input.trim()} size="icon" aria-label="Send Message" className="bg-primary rounded-full h-8 w-8">
+                                <Send className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </form>
+                    <div className="flex justify-center items-center mt-2 px-4">
+                        <p className="text-xs text-muted-foreground">Uni Chat may display inaccurate info. Your Privacy & Orbita GPT</p>
+                    </div>
+                </div>
+              </footer>
+          </div>
+        </main>
+        <SheetContent side="left" className="p-0 flex gap-0 md:hidden w-auto">
+            {sidebarContent}
+        </SheetContent>
+      </Sheet>
 
       {isConfigDialogOpen && (
         <ConfigDialog
@@ -391,5 +420,3 @@ export default function Home() {
     <ChatLayout />
   );
 }
-
-    
