@@ -20,7 +20,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <head />
+      <head>
+        <link rel="preconnect" href="https://placehold.co" />
+      </head>
       <body className={`font-body antialiased h-full ${inter.variable}`}>
         {children}
         <Toaster />

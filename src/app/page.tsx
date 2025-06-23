@@ -1,19 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Star, FileImage, Sun, Moon, Paperclip, Mic, MoreHorizontal, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Search } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Bot, Plus, Send, Settings, User, Loader, Sparkles, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +20,8 @@ import { generateAiResponse } from '@/ai/flows/generate-ai-response';
 import type { Message } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
+const ConfigDialog = dynamic(() => import('@/components/config-dialog').then((mod) => mod.ConfigDialog));
 
 const ChatLayout = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -376,29 +371,15 @@ const ChatLayout = () => {
         </div>
       </main>
 
-      <Dialog open={isConfigDialogOpen} onOpenChange={setIsConfigDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Configure LLM</DialogTitle>
-            <DialogDescription>
-              Enter your API key to connect to your Large Language Model. Your key is stored only in your browser.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Input
-              id="apiKey"
-              value={apiKeyInput}
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              placeholder="Your API Key"
-              type="password"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfigDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleConfigureLlm}>Save Configuration</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {isConfigDialogOpen && (
+        <ConfigDialog
+            open={isConfigDialogOpen}
+            onOpenChange={setIsConfigDialogOpen}
+            apiKeyInput={apiKeyInput}
+            setApiKeyInput={setApiKeyInput}
+            handleConfigureLlm={handleConfigureLlm}
+        />
+      )}
     </div>
   );
 }
