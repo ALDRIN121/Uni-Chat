@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "uni-chat-backend"
+version = "0.1.0"
+description = "Production-grade FastAPI backend for Uni Chat"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+fastapi = "*"
+uvicorn = "*"
+dotenv = "*"
+# langchain = "*"
+groq = "*"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

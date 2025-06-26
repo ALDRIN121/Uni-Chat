@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -23,8 +22,8 @@ import type { Message, ChatSession } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-
-const ConfigDialog = dynamic(() => import('@/components/config-dialog').then((mod) => mod.ConfigDialog));
+import ReactMarkdown from 'react-markdown';
+import { useChatStream } from '@/hooks/use-chat-stream';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -79,11 +78,17 @@ const ChatLayout = () => {
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [model, setModel] = useState('Orbita GPT');
+  const [streamingMessage, setStreamingMessage] = useState<string | null>(null);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const streamingMessageIdRef = useRef<string | null>(null);
+  const activeSessionIdRef = useRef<string | null>(activeSessionId);
+  // Keep refs in sync with state
+  useEffect(() => { streamingMessageIdRef.current = streamingMessageId; }, [streamingMessageId]);
+  useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
+
+  const streamingMessageRef = useRef<string | null>(null);
   const scrollAreaEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [isDarkTheme, setIsDarkTheme] = useState(true);
@@ -91,13 +96,70 @@ const ChatLayout = () => {
   const isMobile = useIsMobile();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // For robust streaming, accumulate the full message in a ref
+  const fullMessageRef = useRef('');
+
+  const { startStream, stopStream } = useChatStream({
+    onToken: (token) => {
+      fullMessageRef.current += token;
+      setStreamingMessage((prev) => (prev ?? '') + token);
+    },
+    onEnd: () => {
+      const msgId = streamingMessageIdRef.current;
+      const sessionId = activeSessionIdRef.current;
+      console.log('onEnd streamingMessageId (ref):', msgId);
+      console.log('onEnd fullMessageRef.current:', fullMessageRef.current);
+      console.log('onEnd activeSessionId (ref):', sessionId);
+      if (msgId && fullMessageRef.current && sessionId) {
+        const aiMessage = {
+          id: msgId,
+          role: 'assistant' as const,
+          content: fullMessageRef.current,
+        };
+        setMessages((prev) => [...prev, aiMessage]);
+        setChatSessions((prev) => prev.map(s =>
+          s.id === sessionId
+            ? { ...s, messages: [...s.messages, aiMessage] }
+            : s
+        ));
+      }
+      setStreamingMessage(null);
+      setStreamingMessageId(null);
+      fullMessageRef.current = '';
+      setIsLoading(false);
+    },
+    onError: (err) => {
+      setStreamingMessage(null);
+      setStreamingMessageId(null);
+      fullMessageRef.current = '';
+      setIsLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Streaming Error',
+        description: String(err),
+      });
+    },
+  });
+
+  // Optionally allow aborting a stream (e.g., on new user message or user action)
+  const abortStream = () => {
+    stopStream();
+    setStreamingMessage(null);
+    setStreamingMessageId(null);
+    setIsLoading(false);
+  };
+
+  // Example: abort stream if user sends a new message while streaming
+  useEffect(() => {
+    if (!isLoading) return;
+    return () => {
+      abortStream();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input]);
+
   useEffect(() => {
     setChatSessions(sampleSessions);
-    const storedApiKey = localStorage.getItem('uni-chat-api-key');
-    if (storedApiKey) {
-      setApiKey(storedApiKey);
-      setApiKeyInput(storedApiKey);
-    }
     
     const root = window.document.documentElement;
     const storedTheme = localStorage.getItem('theme');
@@ -132,91 +194,43 @@ const ChatLayout = () => {
     }
   };
 
-  const handleConfigureLlm = async () => {
-    if (!apiKeyInput) {
-      toast({
-        variant: 'destructive',
-        title: 'API Key is required',
-        description: 'Please enter your API key to continue.',
-      });
-      return;
-    }
-
-    setApiKey(apiKeyInput);
-    localStorage.setItem('uni-chat-api-key', apiKeyInput);
-    toast({
-      title: 'Success',
-      description: 'API Key saved successfully.',
-    });
-    setIsConfigDialogOpen(false);
-  };
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    if (!apiKey) {
-      toast({
-        variant: 'destructive',
-        title: 'API Key not configured',
-        description: 'Please configure your API key in the settings.',
-      });
-      setIsConfigDialogOpen(true);
-      return;
-    }
-
     const userMessage: Message = { id: crypto.randomUUID(), role: 'user', content: input };
-    
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
 
     const currentInput = input;
     setInput('');
     setIsLoading(true);
+    setStreamingMessage('');
+    fullMessageRef.current = '';
+    const aiMessageId = crypto.randomUUID();
+    setStreamingMessageId(aiMessageId);
+    streamingMessageIdRef.current = aiMessageId;
 
     let sessionToUpdateId = activeSessionId;
     let isNewSession = false;
 
     if (!sessionToUpdateId) {
         isNewSession = true;
+        const newSessionId = crypto.randomUUID();
         const newSession: ChatSession = {
-            id: crypto.randomUUID(),
+            id: newSessionId,
             title: currentInput,
             messages: [userMessage],
         };
         setChatSessions(prev => [newSession, ...prev]);
-        setActiveSessionId(newSession.id);
-        sessionToUpdateId = newSession.id;
+        setActiveSessionId(newSessionId);
+        activeSessionIdRef.current = newSessionId; // <-- update ref synchronously
+        sessionToUpdateId = newSessionId;
     } else {
         setChatSessions(prev => prev.map(s => s.id === sessionToUpdateId ? { ...s, messages: newMessages } : s));
+        activeSessionIdRef.current = sessionToUpdateId; // <-- update ref synchronously
     }
-
-    try {
-      const result = await generateAiResponse({ message: currentInput });
-      const aiMessage: Message = { id: crypto.randomUUID(), role: 'assistant', content: result.response };
-      
-      const finalMessages = [...newMessages, aiMessage];
-      setMessages(finalMessages);
-
-      setChatSessions(prev => prev.map(s => s.id === sessionToUpdateId ? { ...s, messages: finalMessages } : s));
-
-    } catch (error) {
-      console.error(error);
-      setMessages(messages);
-      if (isNewSession) {
-          setChatSessions(prev => prev.filter(s => s.id !== sessionToUpdateId));
-          setActiveSessionId(null);
-      } else {
-          setChatSessions(prev => prev.map(s => s.id === sessionToUpdateId ? { ...s, messages } : s));
-      }
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to get a response from the AI.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    startStream(currentInput);
   };
 
   const handleNewChat = () => {
@@ -362,10 +376,6 @@ const ChatLayout = () => {
                             <DropdownMenuItem onSelect={() => setModel('GPT-4')}>GPT-4</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => setModel('Gemini Pro')}>Gemini Pro</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setIsConfigDialogOpen(true)}>
-                                <Settings className="h-4 w-4 mr-2" />
-                                Configuration
-                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -373,7 +383,7 @@ const ChatLayout = () => {
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 <ScrollArea className="flex-1">
-                  <div className="space-y-8 max-w-4xl mx-auto p-6">
+                  <div className="space-y-8 w-full mx-auto p-6">
                     {messages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground pt-20">
                             <Avatar className="h-16 w-16 mb-4 bg-gradient-to-br from-blue-400 to-indigo-600" />
@@ -384,7 +394,7 @@ const ChatLayout = () => {
                             <div
                                 key={message.id}
                                 className={cn(
-                                'flex items-start gap-4',
+                                'flex items-start gap-4 w-full',
                                 message.role === 'user' ? 'justify-end' : ''
                                 )}
                             >
@@ -395,12 +405,14 @@ const ChatLayout = () => {
                                 )}
                                 <div
                                     className={cn(
-                                        'max-w-2xl rounded-2xl p-4',
+                                        'w-full rounded-2xl p-4',
                                         message.role === 'user' && 'bg-primary text-primary-foreground',
                                         message.role === 'assistant' && 'bg-card text-card-foreground'
                                     )}
                                 >
-                                <p className="text-sm">{message.content}</p>
+                                    <div className="prose prose-sm dark:prose-invert">
+                                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                                    </div>
                                 </div>
                                 {message.role === 'user' && (
                                     <Avatar>
@@ -410,13 +422,17 @@ const ChatLayout = () => {
                             </div>
                         ))
                     )}
-                    {isLoading && (
+                    {isLoading && streamingMessage !== null && (
                       <div className="flex items-start gap-4">
                         <Avatar>
                             <AvatarFallback><Bot className="h-5 w-5" /></AvatarFallback>
                         </Avatar>
                         <div className="bg-muted rounded-2xl p-4 flex items-center space-x-2">
+                          <div className="prose prose-sm dark:prose-invert">
+                            <ReactMarkdown>{streamingMessage}</ReactMarkdown>
+                          </div>
                           <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+                          <Button size="sm" variant="ghost" onClick={abortStream} className="ml-2">Stop</Button>
                         </div>
                       </div>
                     )}
@@ -456,16 +472,6 @@ const ChatLayout = () => {
             {sidebarContent}
         </SheetContent>
       </Sheet>
-
-      {isConfigDialogOpen && (
-        <ConfigDialog
-            open={isConfigDialogOpen}
-            onOpenChange={setIsConfigDialogOpen}
-            apiKeyInput={apiKeyInput}
-            setApiKeyInput={setApiKeyInput}
-            handleConfigureLlm={handleConfigureLlm}
-        />
-      )}
     </div>
   );
 }
@@ -477,5 +483,5 @@ export default function Home() {
   );
 }
 
-    
-    
+
+
