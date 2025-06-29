@@ -23,11 +23,11 @@ async def chat_websocket(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            query = data.get("query")
-            if not query:
-                await websocket.send_json({"error": "No query provided."})
+            messages = data.get("messages")
+            if not messages or not isinstance(messages, list):
+                await websocket.send_json({"error": "No messages provided or invalid format."})
                 continue
-            async for chunk in process_query_stream(query):
+            async for chunk in process_query_stream(messages):
                 await websocket.send_json({"token": chunk})
             await websocket.send_json({"end": True})
     except WebSocketDisconnect:

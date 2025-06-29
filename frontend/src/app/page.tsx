@@ -24,6 +24,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import ReactMarkdown from 'react-markdown';
 import { useChatStream } from '@/hooks/use-chat-stream';
+import { useRef as useReactRef } from 'react';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -95,6 +96,7 @@ const ChatLayout = () => {
   const [activeIcon, setActiveIcon] = useState('chat');
   const isMobile = useIsMobile();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const inputRef = useReactRef<HTMLInputElement>(null);
 
   // For robust streaming, accumulate the full message in a ref
   const fullMessageRef = useRef('');
@@ -127,6 +129,7 @@ const ChatLayout = () => {
       setStreamingMessageId(null);
       fullMessageRef.current = '';
       setIsLoading(false);
+      inputRef.current?.focus();
     },
     onError: (err) => {
       setStreamingMessage(null);
@@ -230,7 +233,9 @@ const ChatLayout = () => {
         setChatSessions(prev => prev.map(s => s.id === sessionToUpdateId ? { ...s, messages: newMessages } : s));
         activeSessionIdRef.current = sessionToUpdateId; // <-- update ref synchronously
     }
-    startStream(currentInput);
+    // Instead of sending just the current input, send the full chat history (excluding ids)
+    const messagesForStream = newMessages.map(({ role, content }) => ({ role, content }));
+    startStream(messagesForStream);
   };
 
   const handleNewChat = () => {
@@ -444,6 +449,7 @@ const ChatLayout = () => {
                   <div className="bg-card p-4 rounded-3xl shadow-sm">
                       <form onSubmit={handleSendMessage} className="relative">
                           <Input
+                              ref={inputRef}
                               value={input}
                               onChange={(e) => setInput(e.target.value)}
                               placeholder="Ask me anything..."

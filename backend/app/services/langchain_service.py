@@ -23,7 +23,8 @@ def process_query(query: str):
         "response": ai_msg.content
     }
 
-async def process_query_stream(query: str):
+# Accepts a list of messages (dicts with 'role' and 'content')
+async def process_query_stream(messages):
     llm = ChatGroq(
         model="deepseek-r1-distill-llama-70b",
         temperature=0,
@@ -33,9 +34,7 @@ async def process_query_stream(query: str):
         max_retries=2,
         api_key=settings.GROQ_API_KEY,
     )
-    messages = [
-        ("system", "You are a helpful assistant. Answer the user's question."),
-        ("human", query),
-    ]
-    async for chunk in llm.astream(messages):
+    # Convert messages to the format expected by the LLM: list of (role, content)
+    formatted_messages = [(m['role'], m['content']) for m in messages]
+    async for chunk in llm.astream(formatted_messages):
         yield chunk.content

@@ -1,4 +1,5 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
+import { Message } from '@/lib/types';
 
 export function useChatStream({
   onToken,
@@ -10,15 +11,17 @@ export function useChatStream({
   onError?: (err: any) => void;
 }) {
   const wsRef = useRef<WebSocket | null>(null);
+  const isOpenRef = useRef(false);
 
-  const startStream = (query: string) => {
-    if (wsRef.current) {
-      wsRef.current.close();
+  // Open the websocket connection once and keep it alive
+  const connect = useCallback(() => {
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      return;
     }
     const ws = new WebSocket('ws://localhost:8000/ws/chat');
     wsRef.current = ws;
     ws.onopen = () => {
-      ws.send(JSON.stringify({ query }));
+      isOpenRef.current = true;
     };
     ws.onmessage = (event) => {
       try {
@@ -28,15 +31,12 @@ export function useChatStream({
         }
         if (data.end) {
           onEnd();
-          ws.close();
         }
         if (data.error) {
           onError?.(data.error);
-          ws.close();
         }
       } catch (err) {
         onError?.(err);
-        ws.close();
       }
     };
     ws.onerror = (err) => {
@@ -45,12 +45,55 @@ export function useChatStream({
     };
     ws.onclose = () => {
       wsRef.current = null;
+      isOpenRef.current = false;
     };
-  };
+  }, [onToken, onEnd, onError]);
 
-  const stopStream = () => {
+  // Send messages through the persistent connection
+  const startStream = useCallback((messages: Omit<Message, 'id'>[]) => {
+    connect();
+    const send = () => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ messages }));
+      } else if (wsRef.current) {
+        wsRef.current.addEventListener('open', () => {
+          wsRef.current?.send(JSON.stringify({ messages }));
+        }, { once: true });
+      }
+    };
+    send();
+  }, [connect]);
+
+  // Clean up on unmount, on new chat, or after inactivity
+  useEffect(() => {
+    let inactivityTimeout: NodeJS.Timeout | null = null;
+
+    const resetInactivity = () => {
+      if (inactivityTimeout) clearTimeout(inactivityTimeout);
+      inactivityTimeout = setTimeout(() => {
+        wsRef.current?.close();
+      }, 5 * 60 * 1000); // 5 minutes inactivity
+    };
+
+    // Listen for user activity to reset inactivity timer
+    const activityEvents = ['keydown', 'mousedown', 'touchstart'];
+    activityEvents.forEach(event => window.addEventListener(event, resetInactivity));
+    resetInactivity();
+
+    return () => {
+      wsRef.current?.close();
+      if (inactivityTimeout) clearTimeout(inactivityTimeout);
+      activityEvents.forEach(event => window.removeEventListener(event, resetInactivity));
+    };
+  }, []);
+
+  // Expose a method to force close the connection (e.g. on new chat)
+  const closeConnection = useCallback(() => {
     wsRef.current?.close();
-  };
+  }, []);
 
-  return { startStream, stopStream };
+  // Stop stream (alias for closeConnection for compatibility)
+  const stopStream = closeConnection;
+
+  return { startStream, stopStream, closeConnection };
 }
