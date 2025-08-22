@@ -33,8 +33,18 @@ source .venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Start the backend server
+# Configure environment (optional)
+cp .env.example .env
+# Edit .env file with your settings
+
+# Start the backend server (Method 1 - Using environment variables)
+python start_server.py
+
+# OR Method 2 - Direct uvicorn command
 python -m uvicorn app.main:app --reload --port 8000
+
+# OR Method 3 - Custom port
+PORT=3001 python start_server.py
 ```
 
 **✅ Database is automatically created!**
@@ -86,16 +96,30 @@ npm run dev
 
 ## 🔧 Development Notes
 
-### Database
-- Database file is git-ignored (not committed)
-- Each developer gets their own fresh database
-- No shared database conflicts
-- Reset anytime by deleting `uni_chat.db`
+### Environment Configuration
+The backend now supports configuration via environment variables:
 
-### Environment Variables
 ```bash
-# backend/.env (optional - API keys stored in DB)
-GROQ_API_KEY=your_key_here  # Only for testing
+# .env file
+PORT=8000              # Server port (default: 8000)
+HOST=127.0.0.1        # Server host (default: 127.0.0.1)  
+DATABASE_URL=sqlite:///./uni_chat.db  # Database connection
+GROQ_API_KEY=your_key_here           # Optional: for server-side testing
+```
+
+### Multiple Startup Options
+```bash
+# Option 1: Use start_server.py (reads .env automatically)
+python start_server.py
+
+# Option 2: Override port via environment
+PORT=3001 python start_server.py
+
+# Option 3: Traditional uvicorn command
+python -m uvicorn app.main:app --reload --port 8000
+
+# Option 4: Production-ready
+HOST=0.0.0.0 PORT=80 python start_server.py
 ```
 
 ### Common Issues
