@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Inter } from 'next/font/google';
-import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2, Menu, Search } from 'lucide-react';
+import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2, Menu, Search, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,54 +25,15 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import ReactMarkdown from 'react-markdown';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { useRef as useReactRef } from 'react';
+import { AuthPage } from '@/components/AuthPage';
+import { LLMSetupPage } from '@/components/LLMSetupPage';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/lib/api';
 
 const inter = Inter({ 
   subsets: ['latin'],
   variable: '--font-body',
 });
-
-const sampleSessions: ChatSession[] = [
-  {
-    id: 'session-1',
-    title: 'How can I improve my time management skills?',
-    messages: [
-      { id: '1a', role: 'user', content: 'How can I improve my time management skills?' },
-      { id: '1b', role: 'assistant', content: 'You can start by using techniques like the Pomodoro Technique, creating a prioritized to-do list, and setting clear goals.' },
-    ],
-  },
-  {
-    id: 'session-2',
-    title: "What's the best way to learn a new skill?",
-    messages: [
-      { id: '2a', role: 'user', content: "What's the best way to learn a new skill?" },
-      { id: '2b', role: 'assistant', content: 'To learn a new skill effectively, try breaking it down into smaller parts, practicing consistently, and seeking feedback from experts.' },
-    ],
-  },
-  {
-    id: 'session-3',
-    title: 'How do I start investing in stocks as a beginner?',
-    messages: [
-        { id: '3a', role: 'user', content: 'How do I start investing in stocks as a beginner?' },
-        { id: '3b', role: 'assistant', content: 'As a beginner, you can start by opening a brokerage account, researching index funds or ETFs, and starting with a small investment to learn the ropes.' },
-    ],
-  },
-  {
-    id: 'session-4',
-    title: 'What are the benefits of daily exercise for mental health?',
-    messages: [
-      { id: '4a', role: 'user', content: 'What are the benefits of daily exercise for mental health?' },
-      { id: '4b', role: 'assistant', content: 'Daily exercise can reduce symptoms of depression and anxiety, improve mood, boost self-esteem, and enhance cognitive function.' },
-    ]
-  },
-  {
-    id: 'session-5',
-    title: "What's the difference between a UI designer and a UX designer?",
-    messages: [
-      { id: '5a', role: 'user', content: "What's the difference between a UI designer and a UX designer?" },
-      { id: '5b', role: 'assistant', content: 'A UI (User Interface) designer focuses on the visual aspects of a product, like colors and layouts. A UX (User Experience) designer focuses on the overall feel of the product, including usability and user research.' },
-    ]
-  }
-];
 
 const ChatLayout = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -85,6 +46,8 @@ const ChatLayout = () => {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(activeSessionId);
+  
+  const { user, logout, defaultLLMConfig } = useAuth();
   // Keep refs in sync with state
   useEffect(() => { streamingMessageIdRef.current = streamingMessageId; }, [streamingMessageId]);
   useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
@@ -120,8 +83,8 @@ const ChatLayout = () => {
         };
         setMessages((prev) => [...prev, aiMessage]);
         setChatSessions((prev) => prev.map(s =>
-          s.id === sessionId
-            ? { ...s, messages: [...s.messages, aiMessage] }
+          s.id.toString() === sessionId
+            ? { ...s, messages: [...(s.messages || []), aiMessage] }
             : s
         ));
       }
@@ -162,7 +125,22 @@ const ChatLayout = () => {
   }, [input]);
 
   useEffect(() => {
-    setChatSessions(sampleSessions);
+    // Load user's chat sessions from the API
+    const loadChatSessions = async () => {
+      try {
+        const sessions = await apiService.getChatSessions();
+        setChatSessions(sessions);
+      } catch (error) {
+        console.error('Failed to load chat sessions:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load chat sessions',
+        });
+      }
+    };
+
+    loadChatSessions();
     
     const root = window.document.documentElement;
     const storedTheme = localStorage.getItem('theme');
@@ -173,7 +151,7 @@ const ChatLayout = () => {
       root.classList.remove('dark');
       setIsDarkTheme(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     if (isMobile) {
@@ -215,27 +193,56 @@ const ChatLayout = () => {
     streamingMessageIdRef.current = aiMessageId;
 
     let sessionToUpdateId = activeSessionId;
-    let isNewSession = false;
 
-    if (!sessionToUpdateId) {
-        isNewSession = true;
-        const newSessionId = crypto.randomUUID();
-        const newSession: ChatSession = {
-            id: newSessionId,
-            title: currentInput,
-            messages: [userMessage],
+    try {
+      if (!sessionToUpdateId) {
+        // Create a new session using user's default LLM config
+        if (!defaultLLMConfig) {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No LLM configuration found',
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        const newSession = await apiService.createChatSession({
+          llm_config_id: defaultLLMConfig.id,
+          title: currentInput.slice(0, 50) + (currentInput.length > 50 ? '...' : ''),
+        });
+        
+        const sessionWithMessages: ChatSession = {
+          ...newSession,
+          messages: [userMessage],
         };
-        setChatSessions(prev => [newSession, ...prev]);
-        setActiveSessionId(newSessionId);
-        activeSessionIdRef.current = newSessionId; // <-- update ref synchronously
-        sessionToUpdateId = newSessionId;
-    } else {
-        setChatSessions(prev => prev.map(s => s.id === sessionToUpdateId ? { ...s, messages: newMessages } : s));
-        activeSessionIdRef.current = sessionToUpdateId; // <-- update ref synchronously
+        
+        setChatSessions(prev => [sessionWithMessages, ...prev]);
+        setActiveSessionId(newSession.id.toString());
+        activeSessionIdRef.current = newSession.id.toString();
+        sessionToUpdateId = newSession.id.toString();
+      } else {
+        // Update existing session
+        setChatSessions(prev => prev.map(s => 
+          s.id.toString() === sessionToUpdateId 
+            ? { ...s, messages: newMessages }
+            : s
+        ));
+        activeSessionIdRef.current = sessionToUpdateId;
+      }
+
+      // Start streaming the response
+      startStream(sessionToUpdateId, currentInput);
+      
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to send message',
+      });
+      setIsLoading(false);
     }
-    // Instead of sending just the current input, send the full chat history (excluding ids)
-    const messagesForStream = newMessages.map(({ role, content }) => ({ role, content }));
-    startStream(messagesForStream);
   };
 
   const handleNewChat = () => {
@@ -243,11 +250,35 @@ const ChatLayout = () => {
     setMessages([]);
   };
 
-  const handleSessionSelect = (sessionId: string) => {
-    const session = chatSessions.find(s => s.id === sessionId);
+  const handleSessionSelect = async (sessionId: string | number) => {
+    const sessionIdStr = sessionId.toString();
+    const session = chatSessions.find(s => s.id.toString() === sessionIdStr);
     if (session) {
-      setActiveSessionId(sessionId);
-      setMessages(session.messages);
+      setActiveSessionId(sessionIdStr);
+      
+      // If session doesn't have messages loaded, fetch them
+      if (!session.messages || session.messages.length === 0) {
+        try {
+          const messages = await apiService.getSessionMessages(sessionIdStr);
+          setMessages(messages);
+          
+          // Update the session in the list to include the loaded messages
+          setChatSessions(prev => prev.map(s => 
+            s.id.toString() === sessionIdStr
+              ? { ...s, messages }
+              : s
+          ));
+        } catch (error) {
+          console.error('Failed to load messages:', error);
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to load messages',
+          });
+        }
+      } else {
+        setMessages(session.messages);
+      }
     }
   };
   
@@ -298,6 +329,10 @@ const ChatLayout = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="end" className="w-56 mb-2">
+                <DropdownMenuLabel>
+                  {user?.username || 'User'}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={toggleTheme}>
                   {isDarkTheme ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
                   <span>{isDarkTheme ? "Light Mode" : "Dark Mode"}</span>
@@ -306,6 +341,11 @@ const ChatLayout = () => {
                 <DropdownMenuItem onClick={handleNewChat}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   <span>Clear conversations</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -335,11 +375,11 @@ const ChatLayout = () => {
                           {chatSessions.map((session) => (
                             <Button
                               key={session.id}
-                              variant={activeSessionId === session.id ? "secondary" : "ghost"}
+                              variant={activeSessionId === session.id.toString() ? "secondary" : "ghost"}
                               className="w-full justify-start"
                               onClick={() => handleSessionSelect(session.id)}
                             >
-                              <span className="flex-1 text-left min-w-0 truncate">{session.title}</span>
+                              <span className="flex-1 text-left min-w-0 truncate">{session.title || 'New Chat'}</span>
                             </Button>
                           ))}
                         </div>
@@ -370,7 +410,7 @@ const ChatLayout = () => {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="text-lg font-semibold">
-                                {model}
+                                {defaultLLMConfig ? `${defaultLLMConfig.model_name}` : 'No Model'}
                                 <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -484,9 +524,38 @@ const ChatLayout = () => {
 
 
 export default function Home() {
-  return (
-    <ChatLayout />
-  );
+  const { isAuthenticated, isLoading, hasLLMConfig, checkLLMConfig } = useAuth();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Home component state:', {
+      isAuthenticated,
+      isLoading,
+      hasLLMConfig,
+    });
+  }, [isAuthenticated, isLoading, hasLLMConfig]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
+  if (!hasLLMConfig) {
+    return (
+      <LLMSetupPage 
+        onConfigured={checkLLMConfig}
+      />
+    );
+  }
+
+  return <ChatLayout />;
 }
 
 
