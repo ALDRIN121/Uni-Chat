@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Message } from '@/lib/types';
+import { apiService } from '@/lib/api';
 
 export function useChatStream({
   onToken,
@@ -14,15 +15,18 @@ export function useChatStream({
   const isOpenRef = useRef(false);
 
   // Open the websocket connection once and keep it alive
-  const connect = useCallback(() => {
+  const connect = useCallback((sessionId: string) => {
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-      return;
+      wsRef.current.close();
     }
-    const ws = new WebSocket('ws://localhost:8000/ws/chat');
+    
+    const ws = apiService.createChatWebSocket(sessionId);
     wsRef.current = ws;
+    
     ws.onopen = () => {
       isOpenRef.current = true;
     };
+    
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -39,10 +43,12 @@ export function useChatStream({
         onError?.(err);
       }
     };
+    
     ws.onerror = (err) => {
       onError?.(err);
       ws.close();
     };
+    
     ws.onclose = () => {
       wsRef.current = null;
       isOpenRef.current = false;
@@ -50,14 +56,14 @@ export function useChatStream({
   }, [onToken, onEnd, onError]);
 
   // Send messages through the persistent connection
-  const startStream = useCallback((messages: Omit<Message, 'id'>[]) => {
-    connect();
+  const startStream = useCallback((sessionId: string, messageContent: string) => {
+    connect(sessionId);
     const send = () => {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ messages }));
+        wsRef.current.send(JSON.stringify({ message: messageContent }));
       } else if (wsRef.current) {
         wsRef.current.addEventListener('open', () => {
-          wsRef.current?.send(JSON.stringify({ messages }));
+          wsRef.current?.send(JSON.stringify({ message: messageContent }));
         }, { once: true });
       }
     };
