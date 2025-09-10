@@ -57,4 +57,4 @@ npm run dev
 - See `frontend/README.md` and `backend/README.md` for more details on each part.
 
 ## License
-MIT (or your license here)
+MIT 
