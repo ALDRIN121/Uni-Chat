@@ -6,6 +6,8 @@ from app.models import User
 from app.schemas import ChatSessionCreate, ChatSessionResponse, ChatMessageCreate
 from app.crud import create_chat_session, create_chat_message, get_session_messages, get_chat_session, get_llm_config_by_id, get_decrypted_api_key, update_chat_session, delete_chat_session, delete_last_assistant_message
 from app.services.langchain_service import process_query_stream, process_query
+from app.models import Document
+from app.services.rag_service import retrieve
 
 router = APIRouter()
 
@@ -103,7 +105,22 @@ async def chat_websocket(session_id: int, websocket: WebSocket, token: str | Non
             # Get chat history
             messages = get_session_messages(db, session_id)
             formatted_messages = [{"role": msg.role, "content": msg.content} for msg in messages]
-            
+
+            # RAG: if session has documents, retrieve relevant chunks and inject as system prompt
+            has_docs = db.query(Document).filter(
+                Document.session_id == session_id,
+                Document.status == "ready",
+            ).first()
+            if has_docs:
+                try:
+                    chunks = retrieve(message_data, user.id, session_id)
+                    if chunks:
+                        ctx = "Use the following context. Cite sources as [doc:N].\n\n" + \
+                              "\n\n".join(f"[doc:{c['document_id']}] {c['text']}" for c in chunks)
+                        llm_config["system_prompt"] = llm_config.get("system_prompt", "You are a helpful assistant.") + "\n\n" + ctx
+                except Exception:
+                    pass  # RAG is a nice-to-have; don't break chat on failure
+
             # Stream response with user's LLM config
             assistant_response = ""
             async for chunk in process_query_stream(formatted_messages, llm_config):

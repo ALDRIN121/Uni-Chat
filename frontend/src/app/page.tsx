@@ -287,6 +287,25 @@ const ChatLayout = () => {
     } catch { toast({ variant: 'destructive', title: 'Error', description: 'Failed to rename' }); }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeSessionId) return;
+    const form = new FormData();
+    form.append('file', file);
+    form.append('session_id', activeSessionId);
+    try {
+      const token = localStorage.getItem('access_token') ?? '';
+      const base = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+      const resp = await fetch(`${base}/documents/upload`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form,
+      });
+      if (!resp.ok) throw new Error('Upload failed');
+      await resp.json();
+      toast({ title: 'Document uploaded', description: `${file.name} — processing...` });
+    } catch { toast({ variant: 'destructive', title: 'Upload failed' }); }
+    e.target.value = '';
+  };
+
   const handleSessionSelect = async (sessionId: string | number) => {
     const sessionIdStr = sessionId.toString();
     const session = chatSessions.find(s => s.id.toString() === sessionIdStr);
@@ -558,7 +577,10 @@ const ChatLayout = () => {
                               className="pl-4 pr-32 h-12 rounded-full bg-background"
                           />
                           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                              <Button type="button" variant="ghost" size="icon"><Paperclip className="h-5 w-5" /></Button>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => document.getElementById('file-upload')?.click()}>
+                                <Paperclip className="h-5 w-5" />
+                              </Button>
+                              <input id="file-upload" type="file" accept=".pdf,.txt,.md" className="hidden" onChange={handleFileUpload} />
                           <Button type="button" variant="ghost" size="icon"><Mic className="h-5 w-5" /></Button>
                               <Button type="submit" disabled={isLoading || !input.trim()} size="icon" aria-label="Send Message" className="bg-primary rounded-full h-8 w-8">
                                   <Send className="h-4 w-4" />

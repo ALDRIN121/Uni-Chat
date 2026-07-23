@@ -13,3 +13,7 @@ pydantic-settings
 
 langchain-openai
 langchain-anthropic
+chromadb
+sentence-transformers
+pypdf
+langchain-text-splitters

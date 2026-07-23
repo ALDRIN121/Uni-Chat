@@ -17,6 +17,7 @@ class User(Base):
     # Relationships
     llm_configs = relationship("UserLLMConfig", back_populates="user")
     chat_sessions = relationship("ChatSession", back_populates="user")
+    documents = relationship("Document", back_populates="user")
 
 class LLMProvider(Base):
     __tablename__ = "llm_providers"
@@ -60,15 +61,33 @@ class ChatSession(Base):
     user = relationship("User", back_populates="chat_sessions")
     llm_config = relationship("UserLLMConfig", back_populates="chat_sessions")
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="session")
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=False)
     role = Column(String, nullable=False)  # "user" or "assistant"
     content = Column(Text, nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    
+
     # Relationships
     session = relationship("ChatSession", back_populates="messages")
+
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=True)
+    filename = Column(String, nullable=False)
+    content_type = Column(String, nullable=False)  # e.g., application/pdf, text/plain
+    status = Column(String, default="processing")  # processing, ready, error
+    chunk_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("User", back_populates="documents")
+    session = relationship("ChatSession", back_populates="documents")
