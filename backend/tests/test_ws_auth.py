@@ -10,6 +10,15 @@ async def _fake_process_query_stream(*args, **kwargs):
     yield "Hello"
 
 
+def _fake_validate_api_key(*args, **kwargs):
+    """Fake that always returns valid so config creation doesn't hit a real LLM."""
+    return {"valid": True, "model_tested": args[1] if len(args) > 1 else "test", "message": "ok"}
+
+
+async def _async_fake_validate(*args, **kwargs):
+    return _fake_validate_api_key(*args, **kwargs)
+
+
 def test_ws_rejects_without_token(client):
     with pytest.raises(WebSocketDisconnect) as exc_info:
         with client.websocket_connect("/ws/chat/1") as ws:
@@ -17,7 +26,10 @@ def test_ws_rejects_without_token(client):
     assert exc_info.value.code == 1008
 
 
-def test_ws_rejects_session_owned_by_another_user(auth_client, db):
+def test_ws_rejects_session_owned_by_another_user(auth_client, db, monkeypatch):
+    monkeypatch.setattr(
+        "app.routers.users.validate_api_key", _async_fake_validate,
+    )
     # auth_client (test_user) owns the session.
     provider = db.query(LLMProvider).filter_by(name="groq").first()
     config_id = auth_client.post(
@@ -51,9 +63,13 @@ def test_ws_rejects_session_owned_by_another_user(auth_client, db):
 
 
 def test_ws_happy_path_streams_tokens_then_ends(auth_client, db, monkeypatch):
-    # Never call a real LLM: replace the streaming function the router uses.
+    # Never call a real LLM: replace the streaming function the router uses
+    # AND the validation function so config creation succeeds.
     monkeypatch.setattr(
         "app.routers.chat.process_query_stream", _fake_process_query_stream
+    )
+    monkeypatch.setattr(
+        "app.routers.users.validate_api_key", _async_fake_validate,
     )
 
     provider = db.query(LLMProvider).filter_by(name="groq").first()

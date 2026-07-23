@@ -18,56 +18,56 @@ def get_db():
         db.close()
 
 def seed_providers(db):
-    """Seed default LLM providers if none exist yet.
-
-    Idempotent: only inserts when the llm_providers table is empty. Schema
-    itself is managed by Alembic migrations (see backend/migrations/), not
-    created here.
+    """Seed default LLM providers. Idempotent per-provider: new providers
+    are inserted if missing; existing providers have their model lists
+    refreshed. Schema is managed by Alembic migrations.
     """
+    provider_defs = [
+        LLMProvider(
+            name="groq",
+            display_name="Groq",
+            is_active=True,
+            supported_models=[
+                "llama2-70b-4096",
+                "llama3-8b-8192",
+                "llama3-70b-8192",
+                "mixtral-8x7b-32768",
+                "gemma-7b-it",
+                "deepseek-r1-distill-llama-70b",
+            ],
+        ),
+        LLMProvider(
+            name="openai",
+            display_name="OpenAI",
+            is_active=True,
+            supported_models=[
+                "gpt-3.5-turbo",
+                "gpt-4",
+                "gpt-4-turbo",
+                "gpt-4o",
+                "gpt-4o-mini",
+            ],
+        ),
+        LLMProvider(
+            name="anthropic",
+            display_name="Anthropic",
+            is_active=True,
+            supported_models=[
+                "claude-sonnet-4",
+                "claude-opus-4",
+                "claude-haiku-4.5",
+            ],
+        ),
+    ]
+
     try:
-        if not db.query(LLMProvider).first():
-            providers = [
-                LLMProvider(
-                    name="groq",
-                    display_name="Groq",
-                    is_active=True,
-                    supported_models=[
-                        "llama2-70b-4096",
-                        "llama3-8b-8192",
-                        "llama3-70b-8192",
-                        "mixtral-8x7b-32768",
-                        "gemma-7b-it"
-                    ]
-                ),
-                LLMProvider(
-                    name="openai",
-                    display_name="OpenAI",
-                    is_active=True,
-                    supported_models=[
-                        "gpt-3.5-turbo",
-                        "gpt-4",
-                        "gpt-4-turbo",
-                        "gpt-4o"
-                    ]
-                ),
-                LLMProvider(
-                    name="anthropic",
-                    display_name="Anthropic",
-                    is_active=True,
-                    supported_models=[
-                        "claude-3-sonnet-20240229",
-                        "claude-3-opus-20240229",
-                        "claude-3-haiku-20240307"
-                    ]
-                )
-            ]
-
-            for provider in providers:
-                db.add(provider)
-
-            db.commit()
-            print("Default LLM providers created successfully!")
-
+        for pdef in provider_defs:
+            existing = db.query(LLMProvider).filter(LLMProvider.name == pdef.name).first()
+            if existing:
+                existing.supported_models = pdef.supported_models
+            else:
+                db.add(pdef)
+        db.commit()
     except Exception as e:
         print(f"Error seeding LLM providers: {e}")
         db.rollback()

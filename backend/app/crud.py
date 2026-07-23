@@ -3,7 +3,6 @@ from app.models import User, UserLLMConfig, ChatSession, ChatMessage, LLMProvide
 from app.schemas import UserCreate, LLMConfigCreate, ChatSessionCreate, ChatMessageCreate
 from app.auth import get_password_hash
 from app.core import crypto
-from typing import Optional
 
 # User CRUD
 def create_user(db: Session, user: UserCreate):
@@ -26,6 +25,13 @@ def get_user_by_email(db: Session, email: str):
 
 # LLM Config CRUD
 def create_llm_config(db: Session, config: LLMConfigCreate, user_id: int):
+    # Enforce single default: if this config is the default, un-default all others
+    if config.is_default:
+        db.query(UserLLMConfig).filter(
+            UserLLMConfig.user_id == user_id,
+            UserLLMConfig.is_default == True,
+        ).update({"is_default": False})
+
     db_config = UserLLMConfig(
         user_id=user_id,
         provider_id=config.provider_id,
@@ -47,6 +53,9 @@ def get_llm_config_by_id(db: Session, config_id: int):
 
 def get_decrypted_api_key(config: UserLLMConfig) -> str | None:
     return crypto.decrypt(config.api_key_encrypted)
+
+def get_llm_provider(db: Session, provider_id: int):
+    return db.query(LLMProvider).filter(LLMProvider.id == provider_id).first()
 
 def get_llm_providers(db: Session):
     return db.query(LLMProvider).filter(LLMProvider.is_active == True).all()
