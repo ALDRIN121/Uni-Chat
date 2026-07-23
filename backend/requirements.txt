@@ -10,3 +10,6 @@ python-jose[cryptography]
 cryptography
 python-multipart
 pydantic-settings
+
+langchain-openai
+langchain-anthropic

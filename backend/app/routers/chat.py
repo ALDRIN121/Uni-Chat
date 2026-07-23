@@ -60,6 +60,7 @@ async def chat_websocket(session_id: int, websocket: WebSocket, token: str | Non
             # Prepare LLM config for the service
             llm_config = {
                 'api_key': get_decrypted_api_key(llm_config_record),
+                'provider_name': llm_config_record.provider.name,
                 'model_name': llm_config_record.model_name,
                 'temperature': llm_config_record.config_params.get('temperature', 0),
                 'max_tokens': llm_config_record.config_params.get('max_tokens'),

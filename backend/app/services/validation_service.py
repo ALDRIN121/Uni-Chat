@@ -4,69 +4,76 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-async def validate_groq_api_key(api_key: str, model_name: str = "deepseek-r1-distill-llama-70b") -> Dict[str, Any]:
+
+async def validate_api_key(provider_name: str, model_name: str, api_key: str) -> Dict[str, Any]:
     """
-    Validate GROQ API key by testing it with the existing langchain service
-    
+    Validate an LLM provider API key by testing it with a simple prompt.
+
     Args:
-        api_key: The GROQ API key to validate
+        provider_name: "groq", "openai", or "anthropic"
         model_name: The model to test with
-    
+        api_key: The API key to validate
+
     Returns:
         Dict with validation result and details
     """
+    test_config = {
+        "provider_name": provider_name,
+        "model_name": model_name,
+        "api_key": api_key,
+        "temperature": 0,
+        "max_tokens": 50,
+    }
+
     try:
-        # Create a temporary LLM config for testing
-        test_config = {
-            "api_key": api_key,
-            "model_name": model_name,
-            "temperature": 0,
-            "max_tokens": 50
-        }
-        
-        # Test with a simple message using the existing function
-        test_message = "Hi"
-        response = process_query(test_message, test_config)
-        
+        response = process_query("Hi", test_config)
+
         if response and response.get("response") and response["response"].strip():
             return {
                 "valid": True,
                 "message": "API key is valid and model is accessible",
                 "model_tested": model_name,
-                "test_response": response["response"][:100] + "..." if len(response["response"]) > 100 else response["response"]
+                "test_response": response["response"][:100] + "..."
+                if len(response["response"]) > 100
+                else response["response"],
             }
         else:
             return {
                 "valid": False,
                 "message": "API key validation failed: No response received",
-                "model_tested": model_name
+                "model_tested": model_name,
             }
-            
+
     except Exception as e:
-        logger.error(f"GROQ API key validation failed: {str(e)}")
+        logger.error(f"{provider_name} API key validation failed: {str(e)}")
         error_msg = str(e).lower()
-        
-        if "authentication" in error_msg or "unauthorized" in error_msg or "invalid" in error_msg or "api_key" in error_msg:
+
+        if any(w in error_msg for w in ("authentication", "unauthorized", "invalid", "api_key", "api key")):
             return {
                 "valid": False,
-                "message": "Invalid API key. Please check your GROQ API key and try again.",
-                "error_type": "authentication"
+                "message": f"Invalid API key. Please check your {provider_name} API key and try again.",
+                "error_type": "authentication",
             }
-        elif "model" in error_msg or "not found" in error_msg:
+        elif any(w in error_msg for w in ("model", "not found")):
             return {
                 "valid": False,
                 "message": f"Model '{model_name}' is not accessible with this API key.",
-                "error_type": "model_access"
+                "error_type": "model_access",
             }
-        elif "quota" in error_msg or "limit" in error_msg or "rate" in error_msg:
+        elif any(w in error_msg for w in ("quota", "limit", "rate")):
             return {
                 "valid": False,
                 "message": "API key has reached its usage limit or quota.",
-                "error_type": "quota"
+                "error_type": "quota",
             }
         else:
             return {
                 "valid": False,
                 "message": f"API validation failed: {str(e)}",
-                "error_type": "unknown"
+                "error_type": "unknown",
             }
+
+
+async def validate_groq_api_key(api_key: str, model_name: str = "deepseek-r1-distill-llama-70b") -> Dict[str, Any]:
+    """Backwards-compatible wrapper for Groq-specific validation."""
+    return await validate_api_key("groq", model_name, api_key)
