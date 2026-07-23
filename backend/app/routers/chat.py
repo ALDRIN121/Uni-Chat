@@ -4,7 +4,7 @@ from app.database import get_db
 from app.auth import get_current_user
 from app.models import User
 from app.schemas import ChatSessionCreate, ChatSessionResponse, ChatMessageCreate
-from app.crud import create_chat_session, create_chat_message, get_session_messages, get_chat_session, get_llm_config_by_id
+from app.crud import create_chat_session, create_chat_message, get_session_messages, get_chat_session, get_llm_config_by_id, get_decrypted_api_key
 from app.services.langchain_service import process_query_stream
 from app.utils.timer import timed
 from pydantic import BaseModel
@@ -63,7 +63,7 @@ async def chat_websocket(session_id: int, websocket: WebSocket, db: Session = De
             
             # Prepare LLM config for the service
             llm_config = {
-                'api_key': llm_config_record.api_key_encrypted,  # TODO: Decrypt this
+                'api_key': get_decrypted_api_key(llm_config_record),
                 'model_name': llm_config_record.model_name,
                 'temperature': llm_config_record.config_params.get('temperature', 0),
                 'max_tokens': llm_config_record.config_params.get('max_tokens'),

@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from app.models import User, UserLLMConfig, ChatSession, ChatMessage, LLMProvider
 from app.schemas import UserCreate, LLMConfigCreate, ChatSessionCreate, ChatMessageCreate
 from app.auth import get_password_hash
+from app.core import crypto
 from typing import Optional
 
 # User CRUD
@@ -29,7 +30,7 @@ def create_llm_config(db: Session, config: LLMConfigCreate, user_id: int):
         user_id=user_id,
         provider_id=config.provider_id,
         model_name=config.model_name,
-        api_key_encrypted=config.api_key,  # TODO: Add encryption
+        api_key_encrypted=crypto.encrypt(config.api_key),
         config_params=config.config_params,
         is_default=config.is_default
     )
@@ -43,6 +44,9 @@ def get_user_llm_configs(db: Session, user_id: int):
 
 def get_llm_config_by_id(db: Session, config_id: int):
     return db.query(UserLLMConfig).filter(UserLLMConfig.id == config_id).first()
+
+def get_decrypted_api_key(config: UserLLMConfig) -> str | None:
+    return crypto.decrypt(config.api_key_encrypted)
 
 def get_llm_providers(db: Session):
     return db.query(LLMProvider).filter(LLMProvider.is_active == True).all()
