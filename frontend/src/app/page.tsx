@@ -69,9 +69,6 @@ const ChatLayout = () => {
     onEnd: () => {
       const msgId = streamingMessageIdRef.current;
       const sessionId = activeSessionIdRef.current;
-      console.log('onEnd streamingMessageId (ref):', msgId);
-      console.log('onEnd fullMessageRef.current:', fullMessageRef.current);
-      console.log('onEnd activeSessionId (ref):', sessionId);
       if (msgId && fullMessageRef.current && sessionId) {
         const aiMessage = {
           id: msgId,
@@ -101,6 +98,14 @@ const ChatLayout = () => {
         title: 'Streaming Error',
         description: String(err),
       });
+    },
+    onTitle: (title) => {
+      const sid = activeSessionIdRef.current;
+      if (sid) {
+        setChatSessions(prev => prev.map(s =>
+          s.id.toString() === sid ? { ...s, title } : s
+        ));
+      }
     },
   });
 
@@ -264,6 +269,24 @@ const ChatLayout = () => {
     setMessages([]);
   };
 
+  const handleDeleteSession = async (id: string) => {
+    if (!confirm('Delete this conversation?')) return;
+    try {
+      await apiService.deleteChatSession(id);
+      setChatSessions(prev => prev.filter(s => s.id.toString() !== id));
+      if (activeSessionId === id) handleNewChat();
+    } catch { toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete' }); }
+  };
+
+  const handleRenameSession = async (id: string) => {
+    const title = prompt('New name:');
+    if (!title) return;
+    try {
+      await apiService.renameChatSession(id, title);
+      setChatSessions(prev => prev.map(s => s.id.toString() === id ? { ...s, title } : s));
+    } catch { toast({ variant: 'destructive', title: 'Error', description: 'Failed to rename' }); }
+  };
+
   const handleSessionSelect = async (sessionId: string | number) => {
     const sessionIdStr = sessionId.toString();
     const session = chatSessions.find(s => s.id.toString() === sessionIdStr);
@@ -387,14 +410,24 @@ const ChatLayout = () => {
                         </h3>
                         <div className="space-y-1">
                           {chatSessions.map((session) => (
-                            <Button
-                              key={session.id}
-                              variant={activeSessionId === session.id.toString() ? "secondary" : "ghost"}
-                              className="w-full justify-start"
-                              onClick={() => handleSessionSelect(session.id)}
-                            >
-                              <span className="flex-1 text-left min-w-0 truncate">{session.title || 'New Chat'}</span>
-                            </Button>
+                            <div key={session.id} className="group flex items-center gap-0.5">
+                              <Button
+                                variant={activeSessionId === session.id.toString() ? "secondary" : "ghost"}
+                                className="w-full justify-start"
+                                onClick={() => handleSessionSelect(session.id)}
+                                onDoubleClick={() => handleRenameSession(session.id.toString())}
+                              >
+                                <span className="flex-1 text-left min-w-0 truncate">{session.title || 'New Chat'}</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 shrink-0"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.id.toString()); }}
+                              >
+                                <Trash2 className="h-3 w-3 text-muted-foreground" />
+                              </Button>
+                            </div>
                           ))}
                         </div>
                     </div>

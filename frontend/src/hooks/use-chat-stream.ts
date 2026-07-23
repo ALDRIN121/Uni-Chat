@@ -5,10 +5,12 @@ export function useChatStream({
   onToken,
   onEnd,
   onError,
+  onTitle,
 }: {
   onToken: (token: string) => void;
   onEnd: () => void;
   onError?: (err: unknown) => void;
+  onTitle?: (title: string) => void;
 }) {
   const wsRef = useRef<WebSocket | null>(null);
   const isOpenRef = useRef(false);
@@ -38,6 +40,9 @@ export function useChatStream({
         if (data.error) {
           onError?.(data.error);
         }
+        if (data.title !== undefined) {
+          onTitle?.(data.title);
+        }
       } catch (err) {
         onError?.(err);
       }
@@ -52,7 +57,7 @@ export function useChatStream({
       wsRef.current = null;
       isOpenRef.current = false;
     };
-  }, [onToken, onEnd, onError]);
+  }, [onToken, onEnd, onError, onTitle]);
 
   // Send messages through the persistent connection
   const startStream = useCallback((sessionId: string, messageContent: string) => {

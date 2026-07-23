@@ -4,8 +4,8 @@ from app.database import get_db
 from app.auth import get_current_user, get_user_from_token
 from app.models import User
 from app.schemas import ChatSessionCreate, ChatSessionResponse, ChatMessageCreate
-from app.crud import create_chat_session, create_chat_message, get_session_messages, get_chat_session, get_llm_config_by_id, get_decrypted_api_key
-from app.services.langchain_service import process_query_stream
+from app.crud import create_chat_session, create_chat_message, get_session_messages, get_chat_session, get_llm_config_by_id, get_decrypted_api_key, update_chat_session, delete_chat_session, delete_last_assistant_message
+from app.services.langchain_service import process_query_stream, process_query
 
 router = APIRouter()
 
@@ -30,6 +30,36 @@ def get_session_messages_endpoint(
     
     messages = get_session_messages(db, session_id)
     return messages
+
+
+@router.patch("/chat/sessions/{session_id}")
+def update_session(
+    session_id: int,
+    body: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    session = get_chat_session(db, session_id)
+    if not session or session.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    title = body.get("title")
+    if not title:
+        raise HTTPException(status_code=400, detail="title is required")
+    return update_chat_session(db, session_id, title)
+
+
+@router.delete("/chat/sessions/{session_id}")
+def delete_session(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    session = get_chat_session(db, session_id)
+    if not session or session.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    delete_chat_session(db, session_id)
+    return {"ok": True}
+
 
 @router.websocket("/ws/chat/{session_id}")
 async def chat_websocket(session_id: int, websocket: WebSocket, token: str | None = None, db: Session = Depends(get_db)):
@@ -83,7 +113,25 @@ async def chat_websocket(session_id: int, websocket: WebSocket, token: str | Non
             # Save assistant message
             assistant_message = ChatMessageCreate(role="assistant", content=assistant_response)
             create_chat_message(db, assistant_message, session_id)
-            
+
+            # Auto-title: on first exchange, generate a title from the user's message
+            if not session.title:
+                try:
+                    title_prompt = f"Summarize this in 3-5 words: {message_data}"
+                    title_cfg = {
+                        "provider_name": llm_config_record.provider.name,
+                        "model_name": llm_config_record.model_name,
+                        "api_key": llm_config["api_key"],
+                        "temperature": 0,
+                        "max_tokens": 20,
+                    }
+                    title_result = process_query(title_prompt, title_cfg)
+                    session.title = title_result["response"].strip().strip('"').strip("'")
+                    db.commit()
+                    await websocket.send_json({"title": session.title})
+                except Exception:
+                    pass  # Title is a nice-to-have; don't break chat on failure
+
             await websocket.send_json({"end": True})
     except WebSocketDisconnect:
         pass

@@ -89,5 +89,30 @@ def create_chat_message(db: Session, message: ChatMessageCreate, session_id: int
     db.refresh(db_message)
     return db_message
 
+def update_chat_session(db: Session, session_id: int, title: str):
+    db.query(ChatSession).filter(ChatSession.id == session_id).update({"title": title})
+    db.commit()
+    return get_chat_session(db, session_id)
+
+
+def delete_chat_session(db: Session, session_id: int):
+    session = get_chat_session(db, session_id)
+    if session:
+        db.delete(session)
+        db.commit()
+
+
+def delete_last_assistant_message(db: Session, session_id: int):
+    last = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.session_id == session_id, ChatMessage.role == "assistant")
+        .order_by(ChatMessage.timestamp.desc())
+        .first()
+    )
+    if last:
+        db.delete(last)
+        db.commit()
+
+
 def get_session_messages(db: Session, session_id: int):
     return db.query(ChatMessage).filter(ChatMessage.session_id == session_id).order_by(ChatMessage.timestamp.asc()).all()

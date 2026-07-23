@@ -172,6 +172,24 @@ class ApiService {
     return response.json();
   }
 
+  async deleteChatSession(sessionId: string | number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete session');
+  }
+
+  async renameChatSession(sessionId: string | number, title: string): Promise<ChatSession> {
+    const response = await fetch(`${API_BASE_URL}/chat/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...this.getAuthHeaders() },
+      body: JSON.stringify({ title }),
+    });
+    if (!response.ok) throw new Error('Failed to rename session');
+    return response.json();
+  }
+
   // WebSocket connection for chat
   createChatWebSocket(sessionId: string | number): WebSocket {
     const token = localStorage.getItem('access_token');
