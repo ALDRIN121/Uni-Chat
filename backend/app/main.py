@@ -8,6 +8,13 @@ app = FastAPI(title="Uni Chat API")
 
 @app.on_event("startup")
 def startup_event():
+    # Guard: refuse to boot with insecure default key
+    from app.core.config import settings
+    if settings.SECRET_KEY == "dev-only-insecure-change-me":
+        raise RuntimeError(
+            "SECRET_KEY is set to the insecure default. "
+            "Set a strong random key via the SECRET_KEY environment variable."
+        )
     init_db()
 
 # Add CORS middleware for frontend dev

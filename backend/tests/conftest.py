@@ -25,6 +25,13 @@ def _test_encryption_key(monkeypatch):
     monkeypatch.setattr(settings, "ENCRYPTION_KEY", crypto.generate_key())
 
 
+@pytest.fixture(autouse=True)
+def _test_rate_limit_bypass(monkeypatch):
+    """Disable rate limiting in tests so repeated login calls don't get 429."""
+    import app.routers.auth
+    monkeypatch.setattr(app.routers.auth, "_check_rate_limit", lambda _ip: True)
+
+
 @pytest.fixture
 def db():
     """Fresh in-memory SQLite DB per test.

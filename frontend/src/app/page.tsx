@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Inter } from 'next/font/google';
-import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2, Menu, Search, LogOut } from 'lucide-react';
+import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Zap, Trash2, Menu, Search, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -45,13 +45,14 @@ const ChatLayout = () => {
   const streamingMessageIdRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(activeSessionId);
   
-  const { user, logout, defaultLLMConfig } = useAuth();
   // Keep refs in sync with state
   useEffect(() => { streamingMessageIdRef.current = streamingMessageId; }, [streamingMessageId]);
   useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
 
   const scrollAreaEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { user, logout, defaultLLMConfig } = useAuth();
+  const router = useRouter();
   const [isDarkTheme, setIsDarkTheme] = useState(true);
   const [activeIcon, setActiveIcon] = useState('chat');
   const isMobile = useIsMobile();
@@ -340,12 +341,8 @@ const ChatLayout = () => {
   
   const iconSidebarItems = [
     { id: 'chat', icon: MessageSquare, tooltip: 'Chat' },
-    { id: 'headphones', icon: Headphones, tooltip: 'Headphones' },
-    { id: 'zap', icon: Zap, tooltip: 'Zap' },
-    { id: 'puzzle', icon: Puzzle, tooltip: 'Puzzle' },
+    { id: 'compare', icon: Zap, tooltip: 'Compare' },
     { id: 'settings', icon: Settings, tooltip: 'Settings' },
-    { id: 'package', icon: Package, tooltip: 'Package' },
-    { id: 'users', icon: Users, tooltip: 'Users', badge: 'New' },
   ];
   
   const sidebarContent = (
@@ -363,14 +360,13 @@ const ChatLayout = () => {
                     'h-10 w-10 rounded-lg relative',
                     activeIcon === item.id && 'bg-black text-white hover:bg-black/90 hover:text-white'
                 )}
-                onClick={() => setActiveIcon(item.id)}
+                onClick={() => {
+                  if (item.id === 'settings') { router.push('/settings'); return; }
+                  if (item.id === 'compare') { router.push('/compare'); return; }
+                  setActiveIcon(item.id);
+                }}
                 >
                 <item.icon className="h-5 w-5" />
-                {item.badge && (
-                    <span className="absolute -top-1 -right-2 block h-4 w-auto min-w-[1rem] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] text-white">
-                        {item.badge}
-                    </span>
-                )}
                 </Button>
             ))}
         </div>

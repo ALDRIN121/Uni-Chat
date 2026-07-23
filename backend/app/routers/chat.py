@@ -2,14 +2,34 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, De
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth import get_current_user, get_user_from_token
-from app.models import User
+from app.models import User, Document
 from app.schemas import ChatSessionCreate, ChatSessionResponse, ChatMessageCreate
-from app.crud import create_chat_session, create_chat_message, get_session_messages, get_chat_session, get_llm_config_by_id, get_decrypted_api_key, update_chat_session, delete_chat_session, delete_last_assistant_message
+from app.crud import (
+    create_chat_session,
+    create_chat_message,
+    get_session_messages,
+    get_chat_session,
+    get_llm_config_by_id,
+    get_decrypted_api_key,
+    update_chat_session,
+    delete_chat_session,
+    delete_last_assistant_message,
+)
 from app.services.langchain_service import process_query_stream, process_query
-from app.models import Document
 from app.services.rag_service import retrieve
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _get_owned_session(db: Session, session_id: int, user_id: int):
+    """Return session if it exists and belongs to user, else raise 404."""
+    session = get_chat_session(db, session_id)
+    if not session or session.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
 
 @router.post("/chat/sessions", response_model=ChatSessionResponse)
 def create_session(
@@ -27,9 +47,7 @@ def get_session_messages_endpoint(
 ):
     # Verify session belongs to user
     session = get_chat_session(db, session_id)
-    if not session or session.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
+    _get_owned_session(db, session_id, current_user.id)
     messages = get_session_messages(db, session_id)
     return messages
 
@@ -41,9 +59,7 @@ def update_session(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    session = get_chat_session(db, session_id)
-    if not session or session.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Session not found")
+    _get_owned_session(db, session_id, current_user.id)
     title = body.get("title")
     if not title:
         raise HTTPException(status_code=400, detail="title is required")
@@ -56,9 +72,7 @@ def delete_session(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    session = get_chat_session(db, session_id)
-    if not session or session.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Session not found")
+    _get_owned_session(db, session_id, current_user.id)
     delete_chat_session(db, session_id)
     return {"ok": True}
 
@@ -152,5 +166,6 @@ async def chat_websocket(session_id: int, websocket: WebSocket, token: str | Non
             await websocket.send_json({"end": True})
     except WebSocketDisconnect:
         pass
-    except Exception as e:
-        await websocket.send_json({"error": str(e)})
+    except Exception:
+        logger.exception("Unhandled error in chat WS session %s", session_id)
+        await websocket.send_json({"error": "An internal error occurred"})

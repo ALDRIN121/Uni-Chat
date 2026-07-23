@@ -69,7 +69,7 @@ async def validate_api_key(provider_name: str, model_name: str, api_key: str) ->
         else:
             return {
                 "valid": False,
-                "message": f"API validation failed: {str(e)}",
+                "message": "Unable to validate API key at this time. Please try again later.",
                 "error_type": "unknown",
             }
 

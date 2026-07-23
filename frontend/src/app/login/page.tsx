@@ -11,7 +11,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
-      router.replace(hasLLMConfig ? '/chat' : '/settings?setup=1');
+      router.replace(hasLLMConfig ? '/' : '/settings?setup=1');
     }
   }, [isLoading, isAuthenticated, hasLLMConfig, router]);
 

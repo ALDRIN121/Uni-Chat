@@ -20,7 +20,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { register } = useAuth();
+  const { register, login } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,11 +56,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onToggleMode }) => {
     setIsLoading(true);
     try {
       await register({ username, email, password });
-      toast({
-        title: 'Success',
-        description: 'Account created successfully! Please sign in.',
-      });
-      onToggleMode(); // Switch to login form
+      // Auto-login: immediately log in with the same credentials
+      try {
+        await login({ username, password });
+      } catch {
+        onToggleMode();
+      }
     } catch (error) {
       toast({
         variant: 'destructive',

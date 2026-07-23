@@ -1,21 +1,24 @@
 import os
+import logging
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.database import get_db, SessionLocal
 from app.auth import get_current_user
 from app.models import User, Document
+from app.crud import get_chat_session
 from app.schemas import DocumentResponse
 from app.services.rag_service import index_document, delete_document_vectors
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 UPLOAD_DIR = os.path.join(os.getcwd(), "uploads")
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 
 @router.post("/upload", response_model=DocumentResponse)
 async def upload_document(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     session_id: int = Form(...),
     current_user: User = Depends(get_current_user),
@@ -24,18 +27,28 @@ async def upload_document(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
 
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    safe_name = f"{uuid.uuid4().hex}_{file.filename}"
-    file_path = os.path.join(UPLOAD_DIR, safe_name)
+    # Verify session ownership
+    session = get_chat_session(db, session_id)
+    if not session or session.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Session not found")
 
+    # Read with size limit
     content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail=f"File too large (max {MAX_FILE_SIZE // (1024 * 1024)}MB)")
+
+    # Sanitize filename
+    safe_filename = os.path.basename(file.filename)
+    safe_name = f"{uuid.uuid4().hex}_{safe_filename}"
+    file_path = os.path.join(UPLOAD_DIR, safe_name)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
     with open(file_path, "wb") as f:
         f.write(content)
 
     doc = Document(
         user_id=current_user.id,
         session_id=session_id,
-        filename=file.filename,
+        filename=safe_filename,
         content_type=file.content_type or "application/octet-stream",
         status="processing",
     )
@@ -43,9 +56,20 @@ async def upload_document(
     db.commit()
     db.refresh(doc)
 
-    background_tasks.add_task(
-        index_document, doc.id, file_path, doc.content_type, current_user.id, session_id, db
-    )
+    # Index synchronously using a fresh session so the request-scoped one
+    # isn't accessed from a background thread after it is closed.
+    fresh_db = SessionLocal()
+    try:
+        chunk_count = index_document(doc.id, file_path, doc.content_type, current_user.id, session_id, fresh_db)
+        doc.status = "ready"
+        doc.chunk_count = chunk_count
+        fresh_db.commit()
+    except Exception:
+        logger.exception("Document indexing failed for doc %s", doc.id)
+        doc.status = "error"
+        fresh_db.rollback()
+    finally:
+        fresh_db.close()
 
     return doc
 
