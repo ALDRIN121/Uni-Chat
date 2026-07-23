@@ -20,13 +20,19 @@ This is the backend for the Uni Chat application, built with FastAPI and Python.
 2. **Environment variables:**
    - Copy `.env.example` to `.env` and fill in your API keys and settings as needed.
 
-3. **Run the backend server:**
+3. **Apply database migrations:**
+   ```zsh
+   alembic upgrade head
+   ```
+   Schema is managed by Alembic (`migrations/`), not by hand-editing the DB. Run this before first start; run it again after pulling changes that add new migrations.
+
+4. **Run the backend server:**
    ```zsh
    uvicorn app.main:app --reload --port 8000
    ```
    The API will be available at [http://localhost:8000](http://localhost:8000).
 
-4. **Run tests:**
+5. **Run tests:**
    ```zsh
    # Example for pytest (if tests are present)
    pytest

@@ -17,12 +17,13 @@ def get_db():
     finally:
         db.close()
 
-def init_db():
-    """Initialize database and create tables"""
-    Base.metadata.create_all(bind=engine)
-    
-    # Create default LLM providers if they don't exist
-    db = SessionLocal()
+def seed_providers(db):
+    """Seed default LLM providers if none exist yet.
+
+    Idempotent: only inserts when the llm_providers table is empty. Schema
+    itself is managed by Alembic migrations (see backend/migrations/), not
+    created here.
+    """
     try:
         if not db.query(LLMProvider).first():
             providers = [
@@ -60,15 +61,30 @@ def init_db():
                     ]
                 )
             ]
-            
+
             for provider in providers:
                 db.add(provider)
-            
+
             db.commit()
             print("Default LLM providers created successfully!")
-    
+
     except Exception as e:
-        print(f"Error initializing database: {e}")
+        print(f"Error seeding LLM providers: {e}")
         db.rollback()
+
+def init_db():
+    """Initialize database on app startup.
+
+    Schema is managed by Alembic migrations (`alembic upgrade head`), which
+    is the canonical path and should be run before first start. The
+    create_all() call below is kept as a dev-convenience fallback so the app
+    is still bootable out-of-the-box (e.g. fresh clone, no migrations run
+    yet); it is idempotent and a no-op against a DB alembic already manages.
+    """
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        seed_providers(db)
     finally:
         db.close()
