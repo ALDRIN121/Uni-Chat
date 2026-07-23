@@ -39,7 +39,8 @@ const ChatLayout = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [, setModel] = useState('Orbita GPT');
+  const [configs, setConfigs] = useState<Array<{id: number; model_name: string; provider_id: number; is_default: boolean}>>([]);
+  const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
   const [streamingMessage, setStreamingMessage] = useState<string | null>(null);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
@@ -120,6 +121,22 @@ const ChatLayout = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input]);
+
+  useEffect(() => {
+    // Load user's LLM configs
+    const loadConfigs = async () => {
+      try {
+        const cfgs = await apiService.getLLMConfigs();
+        setConfigs(cfgs);
+        if (!selectedConfigId) {
+          const def = cfgs.find((c: { is_default: boolean }) => c.is_default) ?? cfgs[0];
+          if (def) setSelectedConfigId(def.id);
+        }
+      } catch { /* ignore */ }
+    };
+    loadConfigs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // Load user's chat sessions from the API
@@ -204,8 +221,9 @@ const ChatLayout = () => {
           return;
         }
 
+        const configId = selectedConfigId ?? defaultLLMConfig.id;
         const newSession = await apiService.createChatSession({
-          llm_config_id: defaultLLMConfig.id,
+          llm_config_id: configId,
           title: currentInput.slice(0, 50) + (currentInput.length > 50 ? '...' : ''),
         });
         
@@ -407,17 +425,30 @@ const ChatLayout = () => {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="text-lg font-semibold">
-                                {defaultLLMConfig ? `${defaultLLMConfig.model_name}` : 'No Model'}
+                              {configs.find(c => c.id === selectedConfigId)?.model_name ?? defaultLLMConfig?.model_name ?? 'No Model'}
                                 <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                             <DropdownMenuLabel>Select Model</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => setModel('Orbita GPT')}>Orbita GPT</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setModel('GPT-4')}>GPT-4</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setModel('Gemini Pro')}>Gemini Pro</DropdownMenuItem>
+                            {configs.map((c) => (
+                              <DropdownMenuItem
+                                key={c.id}
+                                onSelect={() => setSelectedConfigId(c.id)}
+                              >
+                                {c.model_name}{c.is_default ? ' (default)' : ''}
+                              </DropdownMenuItem>
+                            ))}
+                            {configs.length === 0 && (
+                              <DropdownMenuItem disabled>
+                                No configurations yet
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => setSelectedConfigId(null)}>
+                              Use default config
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
