@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Inter } from 'next/font/google';
 import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2, Menu, Search, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,8 +24,6 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import ReactMarkdown from 'react-markdown';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { useRef as useReactRef } from 'react';
-import { AuthPage } from '@/components/AuthPage';
-import { LLMSetupPage } from '@/components/LLMSetupPage';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/lib/api';
 
@@ -552,16 +551,19 @@ const ChatLayout = () => {
 
 
 export default function Home() {
-  const { isAuthenticated, isLoading, hasLLMConfig, checkLLMConfig } = useAuth();
+  const { isAuthenticated, isLoading, hasLLMConfig } = useAuth();
+  const router = useRouter();
 
-  // Debug logging
+  // Route redirects: unauthenticated → /login, no config → /settings
   useEffect(() => {
-    console.log('Home component state:', {
-      isAuthenticated,
-      isLoading,
-      hasLLMConfig,
-    });
-  }, [isAuthenticated, isLoading, hasLLMConfig]);
+    if (!isLoading) {
+      if (!isAuthenticated) {
+        router.replace('/login');
+      } else if (!hasLLMConfig) {
+        router.replace('/settings?setup=1');
+      }
+    }
+  }, [isLoading, isAuthenticated, hasLLMConfig, router]);
 
   if (isLoading) {
     return (
@@ -571,16 +573,8 @@ export default function Home() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <AuthPage />;
-  }
-
-  if (!hasLLMConfig) {
-    return (
-      <LLMSetupPage 
-        onConfigured={checkLLMConfig}
-      />
-    );
+  if (!isAuthenticated || !hasLLMConfig) {
+    return null; // redirecting via useEffect
   }
 
   return <ChatLayout />;
