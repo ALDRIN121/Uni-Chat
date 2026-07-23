@@ -163,8 +163,8 @@ class ApiService {
   // WebSocket connection for chat
   createChatWebSocket(sessionId: string | number): WebSocket {
     const token = localStorage.getItem('access_token');
-    const wsUrl = `ws://localhost:8000/ws/chat/${sessionId}`;
-    return new WebSocket(wsUrl);
+    const base = process.env.NEXT_PUBLIC_WS_BASE_URL ?? 'ws://localhost:8000';
+    return new WebSocket(`${base}/ws/chat/${sessionId}?token=${encodeURIComponent(token ?? '')}`);
   }
 }
 

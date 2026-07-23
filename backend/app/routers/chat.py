@@ -1,19 +1,13 @@
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.auth import get_current_user
+from app.auth import get_current_user, get_user_from_token
 from app.models import User
 from app.schemas import ChatSessionCreate, ChatSessionResponse, ChatMessageCreate
 from app.crud import create_chat_session, create_chat_message, get_session_messages, get_chat_session, get_llm_config_by_id, get_decrypted_api_key
 from app.services.langchain_service import process_query_stream
-from app.utils.timer import timed
-from pydantic import BaseModel
-import asyncio
 
 router = APIRouter()
-
-class ChatRequest(BaseModel):
-    query: str
 
 @router.post("/chat/sessions", response_model=ChatSessionResponse)
 def create_session(
@@ -38,23 +32,25 @@ def get_session_messages_endpoint(
     return messages
 
 @router.websocket("/ws/chat/{session_id}")
-async def chat_websocket(session_id: int, websocket: WebSocket, db: Session = Depends(get_db)):
+async def chat_websocket(session_id: int, websocket: WebSocket, token: str | None = None, db: Session = Depends(get_db)):
+    user = get_user_from_token(token, db) if token else None
+    if user is None:
+        await websocket.close(code=1008)  # policy violation
+        return
+    session = get_chat_session(db, session_id)
+    if not session or session.user_id != user.id:
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
     try:
         while True:
             data = await websocket.receive_json()
             message_data = data.get("message")
-            
+
             if not message_data:
                 await websocket.send_json({"error": "No message provided"})
                 continue
-            
-            # Verify session exists and get user's LLM config
-            session = get_chat_session(db, session_id)
-            if not session:
-                await websocket.send_json({"error": "Session not found"})
-                break
-            
+
             # Get the user's LLM configuration
             llm_config_record = get_llm_config_by_id(db, session.llm_config_id)
             if not llm_config_record:
@@ -92,32 +88,3 @@ async def chat_websocket(session_id: int, websocket: WebSocket, db: Session = De
         pass
     except Exception as e:
         await websocket.send_json({"error": str(e)})
-
-# Keep the original endpoint for backward compatibility
-@router.post("/chat")
-@timed
-async def chat_endpoint(request: ChatRequest):
-    try:
-        return {"response": "Please use the new WebSocket endpoint with sessions"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Keep the original WebSocket for backward compatibility
-@router.websocket("/ws/chat")
-async def chat_websocket_legacy(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            data = await websocket.receive_json()
-            messages = data.get("messages")
-            if not messages or not isinstance(messages, list):
-                await websocket.send_json({"error": "No messages provided or invalid format."})
-                continue
-            async for chunk in process_query_stream(messages):
-                await websocket.send_json({"token": chunk})
-            await websocket.send_json({"end": True})
-    except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        await websocket.send_json({"error": str(e)})
-        await websocket.close()
