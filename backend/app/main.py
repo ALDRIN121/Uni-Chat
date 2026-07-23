@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import chat, auth, users
 from app.database import init_db
+from app.core.config import settings
 
 app = FastAPI(title="Uni Chat API")
 
@@ -12,7 +13,7 @@ def startup_event():
 # Add CORS middleware for frontend dev
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:9002", "http://127.0.0.1:9002", "*"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
