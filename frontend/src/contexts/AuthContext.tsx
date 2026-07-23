@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, AuthTokens, LoginRequest, RegisterRequest, LLMConfig } from '@/lib/types';
+import { User, LoginRequest, RegisterRequest, LLMConfig } from '@/lib/types';
 import { apiService } from '@/lib/api';
 
 interface AuthContextType {
@@ -36,24 +36,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkLLMConfig = async () => {
     if (!isAuthenticated) {
-      console.log('Not authenticated, skipping LLM config check');
       return;
     }
-    
+
     try {
-      console.log('Manual LLM config check triggered...');
       const configStatus = await apiService.checkUserHasLLMConfig();
-      console.log('Manual LLM config status:', configStatus);
       setHasLLMConfig(configStatus.has_config);
       setDefaultLLMConfig(configStatus.default_config || null);
     } catch (error) {
-      console.error('Failed to check LLM config:', error);
       setHasLLMConfig(false);
       setDefaultLLMConfig(null);
-      
+
       // If it's an auth error, clear the invalid token
       if (error instanceof Error && error.message.includes('Authentication required')) {
-        console.log('Clearing invalid token...');
         localStorage.removeItem('access_token');
         setUser(null);
       }
@@ -64,21 +59,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const checkLLMConfigOnAuth = async () => {
       if (isAuthenticated) {
-        console.log('User authenticated, checking LLM config...');
         try {
-          console.log('Checking LLM config for authenticated user...');
           const configStatus = await apiService.checkUserHasLLMConfig();
-          console.log('LLM config status:', configStatus);
           setHasLLMConfig(configStatus.has_config);
           setDefaultLLMConfig(configStatus.default_config || null);
         } catch (error) {
-          console.error('Failed to check LLM config:', error);
           setHasLLMConfig(false);
           setDefaultLLMConfig(null);
-          
+
           // If it's an auth error, clear the invalid token
           if (error instanceof Error && error.message.includes('Authentication required')) {
-            console.log('Clearing invalid token...');
             localStorage.removeItem('access_token');
             setUser(null);
           }
@@ -94,16 +84,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkAuth = async () => {
       const token = localStorage.getItem('access_token');
       if (token) {
-        console.log('Found stored token, setting user as authenticated');
-        // Create mock user for now - in real app you'd decode JWT or call /me endpoint
-        const mockUser: User = {
-          id: 1,
-          username: 'user',
-          email: 'user@example.com',
-          created_at: new Date().toISOString(),
-        };
-        setUser(mockUser);
-        // LLM config will be checked by the separate useEffect above
+        try {
+          const currentUser = await apiService.getCurrentUser();
+          setUser(currentUser);
+          // LLM config will be checked by the separate useEffect above
+        } catch {
+          // Invalid/expired token - clear it and log the user out
+          localStorage.removeItem('access_token');
+          setUser(null);
+        }
       }
       setIsLoading(false);
     };
@@ -114,18 +103,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (credentials: LoginRequest) => {
     try {
       setIsLoading(true);
-      const tokens = await apiService.login(credentials);
-      
-      // Create mock user object
-      const mockUser: User = {
-        id: 1,
-        username: credentials.username,
-        email: `${credentials.username}@example.com`,
-        created_at: new Date().toISOString(),
-      };
-      
-      setUser(mockUser);
-      
+      await apiService.login(credentials);
+
+      const currentUser = await apiService.getCurrentUser();
+      setUser(currentUser);
+
       // Check LLM configuration after login
       await checkLLMConfig();
     } finally {

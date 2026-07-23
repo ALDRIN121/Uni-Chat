@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,11 +20,6 @@ export const LLMSetupPage: React.FC<LLMSetupProps> = ({ onConfigured }) => {
   
   const { toast } = useToast();
 
-  // Debug: log when component mounts
-  useEffect(() => {
-    console.log('LLMSetupPage mounted - user does not have LLM config');
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!apiKey.trim()) {
@@ -40,7 +35,7 @@ export const LLMSetupPage: React.FC<LLMSetupProps> = ({ onConfigured }) => {
     setValidationStatus('validating');
     
     try {
-      const result = await apiService.setupDefaultGroqConfig(apiKey);
+      await apiService.setupDefaultGroqConfig(apiKey);
 
       setValidationStatus('success');
       toast({
@@ -53,8 +48,7 @@ export const LLMSetupPage: React.FC<LLMSetupProps> = ({ onConfigured }) => {
       }, 1000);
     } catch (error) {
       setValidationStatus('error');
-      console.error('Setup error:', error);
-      
+
       // Handle specific error cases
       if (error instanceof Error) {
         if (error.message.includes('already has groq configuration') || error.message.includes('already configured')) {
@@ -120,11 +114,6 @@ export const LLMSetupPage: React.FC<LLMSetupProps> = ({ onConfigured }) => {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
-            {/* Debug info */}
-            <div className="bg-yellow-50 p-2 rounded text-xs text-yellow-700 border border-yellow-200">
-              Debug: Showing setup because hasLLMConfig=false. Check browser console for details.
-            </div>
-            
             <div className="space-y-2">
               <Label htmlFor="apiKey">GROQ API Key</Label>
               <div className="relative">
@@ -187,17 +176,6 @@ export const LLMSetupPage: React.FC<LLMSetupProps> = ({ onConfigured }) => {
                 ? 'Configuration Saved!'
                 : 'Validate & Save Configuration'
               }
-            </Button>
-            
-            {/* Skip button for users who might already have config */}
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full" 
-              onClick={onConfigured}
-              disabled={isLoading}
-            >
-              Skip - I already have a configuration
             </Button>
           </div>
         </form>

@@ -1,6 +1,6 @@
 import { AuthTokens, LoginRequest, RegisterRequest, User, LLMProvider, LLMConfig, ChatSession } from './types';
 
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
 
 class ApiService {
   private getAuthHeaders(): Record<string, string> {
@@ -48,6 +48,18 @@ class ApiService {
     return !!localStorage.getItem('access_token');
   }
 
+  async getCurrentUser(): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/users/me`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch current user');
+    }
+
+    return response.json();
+  }
+
   // LLM Providers
   async getLLMProviders(): Promise<LLMProvider[]> {
     const response = await fetch(`${API_BASE_URL}/users/llm-providers`);
@@ -68,7 +80,7 @@ class ApiService {
     provider_id: number;
     model_name: string;
     api_key?: string;
-    config_params?: Record<string, any>;
+    config_params?: Record<string, unknown>;
     is_default?: boolean;
   }): Promise<LLMConfig> {
     const response = await fetch(`${API_BASE_URL}/users/me/llm-configs`, {

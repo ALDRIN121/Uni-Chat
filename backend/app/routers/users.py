@@ -2,13 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth import get_current_user
-from app.schemas import LLMConfigCreate, LLMConfigResponse, ChatSessionResponse, GroqSetupRequest
+from app.schemas import LLMConfigCreate, LLMConfigResponse, ChatSessionResponse, GroqSetupRequest, UserResponse
 from app.crud import create_llm_config, get_user_llm_configs, get_llm_providers, get_user_chat_sessions
 from app.models import User
 from app.services.validation_service import validate_groq_api_key
 from typing import List
 
 router = APIRouter()
+
+@router.get("/me", response_model=UserResponse)
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 @router.get("/me/llm-configs", response_model=List[LLMConfigResponse])
 def get_my_llm_configs(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

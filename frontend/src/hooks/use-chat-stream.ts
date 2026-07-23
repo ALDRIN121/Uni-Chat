@@ -1,5 +1,4 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Message } from '@/lib/types';
 import { apiService } from '@/lib/api';
 
 export function useChatStream({
@@ -9,7 +8,7 @@ export function useChatStream({
 }: {
   onToken: (token: string) => void;
   onEnd: () => void;
-  onError?: (err: any) => void;
+  onError?: (err: unknown) => void;
 }) {
   const wsRef = useRef<WebSocket | null>(null);
   const isOpenRef = useRef(false);

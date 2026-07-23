@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import { Inter } from 'next/font/google';
 import { Bot, Plus, Send, Settings, User, Loader, Sun, Moon, Paperclip, Mic, ChevronDown, MessageSquare, Headphones, Zap, Puzzle, Package, Users, Trash2, Menu, Search, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
-import { generateAiResponse } from '@/ai/flows/generate-ai-response';
 import type { Message, ChatSession } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -41,7 +39,7 @@ const ChatLayout = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [model, setModel] = useState('Orbita GPT');
+  const [, setModel] = useState('Orbita GPT');
   const [streamingMessage, setStreamingMessage] = useState<string | null>(null);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const streamingMessageIdRef = useRef<string | null>(null);
@@ -52,7 +50,6 @@ const ChatLayout = () => {
   useEffect(() => { streamingMessageIdRef.current = streamingMessageId; }, [streamingMessageId]);
   useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
 
-  const streamingMessageRef = useRef<string | null>(null);
   const scrollAreaEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const [isDarkTheme, setIsDarkTheme] = useState(true);

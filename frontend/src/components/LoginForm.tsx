@@ -94,7 +94,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onToggleMode }) => {
             onClick={onToggleMode}
             className="text-sm"
           >
-            Don't have an account? Sign up
+            Don&apos;t have an account? Sign up
           </Button>
         </CardFooter>
       </form>

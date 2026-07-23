@@ -43,3 +43,11 @@ def test_authorized_has_llm_config(auth_client):
     resp = auth_client.get("/users/me/has-llm-config")
     assert resp.status_code == 200
     assert resp.json() == {"has_config": False, "default_config": None}
+
+
+def test_users_me_returns_real_user(auth_client, test_user):
+    resp = auth_client.get("/users/me")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["username"] == test_user["username"]
+    assert body["username"] != "user"

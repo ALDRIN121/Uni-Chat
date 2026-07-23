@@ -32,7 +32,7 @@ export interface LLMConfig {
   user_id: number;
   provider_id: number;
   model_name: string;
-  config_params: Record<string, any>;
+  config_params: Record<string, unknown>;
   is_default: boolean;
   created_at: string;
 }
